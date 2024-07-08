@@ -109,3 +109,102 @@ SecurityConfigurer (인터페이스)
    - SecurityBuilder 를 통해서 생성된 HeaderConfigurer, HttpBasicConfigurer 등을 생성하고 각 클레스 마다 해당하는 필터를 초기화 및 설정한다.
 
 이 흐름을 통해 스프링 시큐리티는 자동으로 보안 설정을 초기화하고 구성하여 애플리케이션이 실행될 때 필요한 보안 기능을 제공합니다.
+  
+### 실습
+스프링 부트를 동작하면 자동설정 클레스가 기본 인증, 인가와 관련된 설정을 하게된다.  
+자동설정 에서 해당 설정을 생성한다.
+`HttpSecurityConfiguration`:  
+```java
+    @Bean({"org.springframework.security.config.annotation.web.configuration.HttpSecurityConfiguration.httpSecurity"})
+    @Scope("prototype")
+    HttpSecurity httpSecurity() throws Exception {
+        LazyPasswordEncoder passwordEncoder = new LazyPasswordEncoder(this.context);
+        AuthenticationManagerBuilder authenticationBuilder = new DefaultPasswordEncoderAuthenticationManagerBuilder(this.objectPostProcessor, passwordEncoder);
+        authenticationBuilder.parentAuthenticationManager(this.authenticationManager());
+        authenticationBuilder.authenticationEventPublisher(this.getAuthenticationEventPublisher());
+        HttpSecurity http = new HttpSecurity(this.objectPostProcessor, authenticationBuilder, this.createSharedObjects());
+        WebAsyncManagerIntegrationFilter webAsyncManagerIntegrationFilter = new WebAsyncManagerIntegrationFilter();
+        webAsyncManagerIntegrationFilter.setSecurityContextHolderStrategy(this.securityContextHolderStrategy);
+        http.csrf(Customizer.withDefaults()).addFilter(webAsyncManagerIntegrationFilter).exceptionHandling(Customizer.withDefaults()).headers(Customizer.withDefaults()).sessionManagement(Customizer.withDefaults()).securityContext(Customizer.withDefaults()).requestCache(Customizer.withDefaults()).anonymous(Customizer.withDefaults()).servletApi(Customizer.withDefaults()).apply(new DefaultLoginPageConfigurer());
+        http.logout(Customizer.withDefaults());
+        this.applyCorsIfAvailable(http);
+        this.applyDefaultConfigurers(http);
+        return http;
+    }
+
+```
+> @Scope("prototype")  
+> 빈을 요청할 때마다 새로운 인스턴스를 생성하도록 스프링 컨테이너에 지시합니다.
+  
+기본 설정 부분을 따라 들어가 보면  
+```java
+ http.csrf(Customizer.withDefaults()).addFilter(webAsyncManagerIntegrationFilter).exceptionHandling(Customizer.withDefaults()).headers(Customizer.withDefaults()).sessionManagement(Customizer.withDefaults()).securityContext(Customizer.withDefaults()).requestCache(Customizer.withDefaults()).anonymous(Customizer.withDefaults()).servletApi(Customizer.withDefaults()).apply(new DefaultLoginPageConfigurer());
+        http.logout(Customizer.withDefaults());
+```
+  
+```java
+    public HttpSecurity csrf(Customizer<CsrfConfigurer<HttpSecurity>> csrfCustomizer) throws Exception {
+        ApplicationContext context = this.getContext();
+        csrfCustomizer.customize((CsrfConfigurer)this.getOrApply(new CsrfConfigurer(context)));
+        return this;
+    }
+```
+```java
+public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends AbstractHttpConfigurer<CsrfConfigurer<H>, H> {
+    //...
+}
+``` 
+참조 하고 있는 Configurer 클레스를 계속 타고가다보면 결국 SecurityConfigurer 클레스가 나온다.  
+그래서 이 해당 설정 클레스를 지금 생성하면서 `this.getOrApply` 해당 메서드를 통해서 생서되는 설정 클레스를 어느 곳에다가 적용하고 있는 것을 볼 수 있다.  
+  
+그래서 이러한 과정들을 필요한 필터에 맞게 설정을 추가하여 `SecurityBuilder` 를 통해 생성한다.  
+  
+이렇게 생성된 설정클레스 HttpSecurity를 `SpringBootWebSecurityConfiguration` 에서 해당 빈을 주입 받아서 처리하게 된다.  
+```java
+    @ConditionalOnDefaultWebSecurity
+    static class SecurityFilterChainConfiguration {
+        SecurityFilterChainConfiguration() {
+        }
+
+        @Bean
+        @Order(2147483642)
+        SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+            http.authorizeHttpRequests((requests) -> {
+                ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)requests.anyRequest()).authenticated();
+            });
+            http.formLogin(Customizer.withDefaults());
+            http.httpBasic(Customizer.withDefaults());
+            return (SecurityFilterChain)http.build();
+        }
+    }
+```
+  
+이렇게 설정파일 빈을 만들고 `SecurityFilterChain` 최종적으로 build 를 하게 되면 각 설정 클레스 안에 있는 초기화(init) 와 이를 적용(configure) 메서드를 호출하게 된다.  
+  
+```java
+    public final O build() throws Exception {
+        if (this.building.compareAndSet(false, true)) {
+            this.object = this.doBuild();
+            return this.object;
+        } else {
+            throw new AlreadyBuiltException("This object has already been built");
+        }
+    }
+```
+this.doBuild():
+```java
+    protected final O doBuild() throws Exception {
+        synchronized(this.configurers) {
+            this.buildState = AbstractConfiguredSecurityBuilder.BuildState.INITIALIZING;
+            this.beforeInit();
+            this.init(); // 초기화
+            this.buildState = AbstractConfiguredSecurityBuilder.BuildState.CONFIGURING;
+            this.beforeConfigure();
+            this.configure(); // 설정 적용
+            this.buildState = AbstractConfiguredSecurityBuilder.BuildState.BUILDING;
+            O result = this.performBuild();
+            this.buildState = AbstractConfiguredSecurityBuilder.BuildState.BUILT;
+            return result;
+        }
+    }
+```

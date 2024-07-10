@@ -335,7 +335,8 @@ WebSecurityConfiguration 에서 WebSecurity를 생성하고 초기화한다. Web
 +----------------------------------------+
 | FilterChainProxy                       |
 |  +----------------------------------+  |
-|  | SecurityFilterChain              |  |
+|  | SecurityFilterChains              |  |
+|  |   SecurityFilterChain             |  |
 |  +----------------------------------+  |
 +----------------------------------------+
                 |
@@ -376,3 +377,193 @@ WebSecurityConfiguration 에서 WebSecurity를 생성하고 초기화한다. Web
 즉 `HttpSecurity` 가 여러설정들을 가지고 `SecurityFilterChain` 빈을 생성한다. 이렇게 생성된 필터들을 Client 에서 요청이 들어오면 해당 요청에 맞는 필터를 꺼내서 사용해야 하는데 이 작업을 `SecurityFilterChain` 이 직접 수행 하지 않고 `FilterChainProxy` 빈이 그 작업을 수행하게 된다.
 
   
+### 코드 확인
+HttpSecurityConfiguration: 에서  HttpSecurity 빈을 생성
+```java
+    @Bean({"org.springframework.security.config.annotation.web.configuration.HttpSecurityConfiguration.httpSecurity"})
+    @Scope("prototype")
+    HttpSecurity httpSecurity() throws Exception {
+        LazyPasswordEncoder passwordEncoder = new LazyPasswordEncoder(this.context);
+        AuthenticationManagerBuilder authenticationBuilder = new DefaultPasswordEncoderAuthenticationManagerBuilder(this.objectPostProcessor, passwordEncoder);
+        authenticationBuilder.parentAuthenticationManager(this.authenticationManager());
+        authenticationBuilder.authenticationEventPublisher(this.getAuthenticationEventPublisher());
+        HttpSecurity http = new HttpSecurity(this.objectPostProcessor, authenticationBuilder, this.createSharedObjects());
+        WebAsyncManagerIntegrationFilter webAsyncManagerIntegrationFilter = new WebAsyncManagerIntegrationFilter();
+        webAsyncManagerIntegrationFilter.setSecurityContextHolderStrategy(this.securityContextHolderStrategy);
+        http.csrf(Customizer.withDefaults()).addFilter(webAsyncManagerIntegrationFilter).exceptionHandling(Customizer.withDefaults()).headers(Customizer.withDefaults()).sessionManagement(Customizer.withDefaults()).securityContext(Customizer.withDefaults()).requestCache(Customizer.withDefaults()).anonymous(Customizer.withDefaults()).servletApi(Customizer.withDefaults()).apply(new DefaultLoginPageConfigurer());
+        http.logout(Customizer.withDefaults());
+        this.applyCorsIfAvailable(http);
+        this.applyDefaultConfigurers(http);
+        return http;
+    }
+```
+`HttpSecurity` 빈을 생성함과 동시에 `WebSecurityConfiguration` 에서 webSecurity와 관련된 객체를 생성한다.:
+```java
+public void setFilterChainProxySecurityConfigurer(ObjectPostProcessor<Object> objectPostProcessor, ConfigurableListableBeanFactory beanFactory) throws Exception {
+        this.webSecurity = (WebSecurity)objectPostProcessor.postProcess(new WebSecurity(objectPostProcessor));
+        if (this.debugEnabled != null) {
+            this.webSecurity.debug(this.debugEnabled);
+        }
+
+        List<SecurityConfigurer<Filter, WebSecurity>> webSecurityConfigurers = (new AutowiredWebSecurityConfigurersIgnoreParents(beanFactory)).getWebSecurityConfigurers();
+        webSecurityConfigurers.sort(WebSecurityConfiguration.AnnotationAwareOrderComparator.INSTANCE);
+        Integer previousOrder = null;
+        Object previousConfig = null;
+
+        Iterator var6;
+        SecurityConfigurer config;
+        for(var6 = webSecurityConfigurers.iterator(); var6.hasNext(); previousConfig = config) {
+            config = (SecurityConfigurer)var6.next();
+            Integer order = WebSecurityConfiguration.AnnotationAwareOrderComparator.lookupOrder(config);
+            if (previousOrder != null && previousOrder.equals(order)) {
+                throw new IllegalStateException("@Order on WebSecurityConfigurers must be unique. Order of " + order + " was already used on " + previousConfig + ", so it cannot be used on " + config + " too.");
+            }
+
+            previousOrder = order;
+        }
+
+        var6 = webSecurityConfigurers.iterator();
+
+        while(var6.hasNext()) {
+            config = (SecurityConfigurer)var6.next();
+            this.webSecurity.apply(config);
+        }
+
+        this.webSecurityConfigurers = webSecurityConfigurers;
+    }
+```
+이렇게 생성된 `HttpSecurity` 빈을 주입 받아서 `SecurityFilterChain`빈을 생성한다:  
+SpringBootWebSecurityConfiguration:  
+```java
+        SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+            http.authorizeHttpRequests((requests) -> {
+                ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl)requests.anyRequest()).authenticated();
+            });
+            http.formLogin(Customizer.withDefaults());
+            http.httpBasic(Customizer.withDefaults());
+            return (SecurityFilterChain)http.build();
+        }
+```
+이렇게 최종적으로 build() 메서드가 호출되면  
+HttpSecurity:  
+```java 
+    protected DefaultSecurityFilterChain performBuild() {
+        ExpressionUrlAuthorizationConfigurer<?> expressionConfigurer = (ExpressionUrlAuthorizationConfigurer)this.getConfigurer(ExpressionUrlAuthorizationConfigurer.class);
+        AuthorizeHttpRequestsConfigurer<?> httpConfigurer = (AuthorizeHttpRequestsConfigurer)this.getConfigurer(AuthorizeHttpRequestsConfigurer.class);
+        boolean oneConfigurerPresent = expressionConfigurer == null ^ httpConfigurer == null;
+        Assert.state(expressionConfigurer == null && httpConfigurer == null || oneConfigurerPresent, "authorizeHttpRequests cannot be used in conjunction with authorizeRequests. Please select just one.");
+        this.filters.sort(OrderComparator.INSTANCE);
+        List<Filter> sortedFilters = new ArrayList(this.filters.size());
+        Iterator var5 = this.filters.iterator();
+
+        while(var5.hasNext()) {
+            Filter filter = (Filter)var5.next();
+            sortedFilters.add(((OrderedFilter)filter).filter);
+        }
+
+        return new DefaultSecurityFilterChain(this.requestMatcher, sortedFilters);
+    }
+```
+우리가 앞에서 설정했던 필터들을 사용자 요청에 맞게 사용하게 위해서 기본적으로 `DefaultSecurityFilterChain`을 생성한다. 생성자로 `RequestMatcher`(요청에 맞는 필터를 처리여부를 판단) 와 `List<Filter>` 를 전달한다.  
+  
+기본적으로 `RequestMatcher` 의값을 확인해 보면:  
+```java
+
+    public HttpSecurity(ObjectPostProcessor<Object> objectPostProcessor, AuthenticationManagerBuilder authenticationBuilder, Map<Class<?>, Object> sharedObjects) {
+        super(objectPostProcessor);
+        this.requestMatcher = AnyRequestMatcher.INSTANCE; // 이부분
+        this.filterOrders = new FilterOrderRegistration();
+        Assert.notNull(authenticationBuilder, "authenticationBuilder cannot be null");
+        this.setSharedObject(AuthenticationManagerBuilder.class, authenticationBuilder);
+        Iterator var4 = sharedObjects.entrySet().iterator();
+
+        while(var4.hasNext()) {
+            Map.Entry<Class<?>, Object> entry = (Map.Entry)var4.next();
+            this.setSharedObject((Class)entry.getKey(), entry.getValue());
+        }
+
+        ApplicationContext context = (ApplicationContext)sharedObjects.get(ApplicationContext.class);
+        this.requestMatcherConfigurer = new RequestMatcherConfigurer(context);
+    }
+```
+  
+```java 
+public final class AnyRequestMatcher implements RequestMatcher {
+    public static final RequestMatcher INSTANCE = new AnyRequestMatcher();
+
+    private AnyRequestMatcher() {
+    }
+    //....
+}
+```
+기본적으로 `AnyRequestMatcher`  객체러를 생성하고 이는 모든 요청에 대해서 처리를 의미한다.  
+  
+여기까지 해서 HttpSecurity가 기본적인 SecurityFilterChain 빈을 만드는 것을 확인했고 이를 `WebSecurity` 에서 받아서 이를 활용하는 `FilterChainProxy`를 생성을 알아봅시다.  
+  
+WebSecurityConfiguration 클레스에서 빈 주입 부분을 확인해 보면  
+```java
+    @Autowired(
+        required = false
+    )
+    void setFilterChains(List<SecurityFilterChain> securityFilterChains) {
+        this.securityFilterChains = securityFilterChains;
+    }
+```
+Setter 주입을 통해서 `securityFilterChains` 을 주입받고 있는 것을 확인해 볼 수 있다.  
+이렇게 주입받은 securityFilterChains을 WebSecurity에 설정을 한다.  
+```java 
+ Iterator var2 = this.securityFilterChains.iterator();
+
+        while(var2.hasNext()) {
+            SecurityFilterChain securityFilterChain = (SecurityFilterChain)var2.next();
+            this.webSecurity.addSecurityFilterChainBuilder(() -> {
+                return securityFilterChain;
+            });
+        }
+```
+  
+이렇게 설정을 마무리 하면 최종적으로 Websecurity를 build()한다.  
+```java 
+ @Bean(
+        name = {"springSecurityFilterChain"}
+    )
+    public Filter springSecurityFilterChain() throws Exception {
+    //..
+    return (Filter)this.webSecurity.build();
+    }
+
+```
+WebSecurity 역시 최종적으로 performBuild() 를 통해서 빈을 완성한다.  
+```java 
+protected Filter performBuild() throws Exception {
+    //...
+    var4 = this.securityFilterChainBuilders.iterator();
+
+    while(var4.hasNext()) {
+        SecurityBuilder<? extends SecurityFilterChain> securityFilterChainBuilder = (SecurityBuilder)var4.next();
+        SecurityFilterChain securityFilterChain = (SecurityFilterChain)securityFilterChainBuilder.build(); // 우리가 생성한 필터 체인을 꺼낸다
+        securityFilterChains.add(securityFilterChain); // 그 꺼낸 필터 체인을 securityFilterChains 라는 속성에 추가한다.
+        requestMatcherPrivilegeEvaluatorsEntries.add(this.getRequestMatcherPrivilegeEvaluatorsEntry(securityFilterChain));
+    }
+    if (this.privilegeEvaluator == null) {
+        this.privilegeEvaluator = new RequestMatcherDelegatingWebInvocationPrivilegeEvaluator(requestMatcherPrivilegeEvaluatorsEntries);
+    }
+
+    FilterChainProxy filterChainProxy = new FilterChainProxy(securityFilterChains); // 추가한 속성을 프록시필터 체인에 추가한다.
+    if (this.httpFirewall != null) {
+        filterChainProxy.setFirewall(this.httpFirewall);
+    }
+    //....
+
+    Filter result = filterChainProxy;
+    if (this.debugEnabled) {
+        this.logger.warn("\n\n********************************************************************\n**********        Security debugging is enabled.       *************\n**********    This may include sensitive information.  *************\n**********      Do not use in a production system!     *************\n********************************************************************\n\n");
+        result = new DebugFilter(filterChainProxy);
+    }
+
+    this.postBuildAction.run();
+    return (Filter)result;
+}
+
+```
+이렇게 최종적으로 `FilterChainProxy`가 생성된다.

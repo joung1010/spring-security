@@ -208,3 +208,171 @@ this.doBuild():
         }
     }
 ```
+  
+## WebSecurity And HttpSecurity
+  
+### HttpSecurity (SecurityBuilder 의 구현체)
+HttpSecurityConfiguration 에서 HttpSecurity 를 생성하고 초기화를 진행한다 해당 클레스는 보안에 필요한 각 설정 클레스와 필터들을 생성하고 최종적으로는 **`SecurityFilterChain`** 빈을 생성한다.  
+
+HttpSecurity를 통해 **인증**, **인가**, 세션 관리, CSRF 보호 등의 다양한 보안 기능을 설정할 수 있습니다.  
+  
+### HttpSecurity 구성 다이어 그램
+```scss
+
++--------------------------------------------+  +------------------------------------------------------+
+|               HttpSecurity                 |  |                  Security Configuration              |
+|                                            |  |------------------------------------------------------|
+|  +-----------------+  +------------------+ |  | - WebSecurityConfigurerAdapter                       |
+|  | Authentication  |  | Authorization    | |  | - @EnableWebSecurity                                 |
+|  |                 |  |                  | |  | - HttpSecurity configuration                         |
+|  | - formLogin()   |  | - antMatchers()  | |  +-------------------|----------------------------------+
+|  | - httpBasic()   |  | - anyRequest()   | |                      |
+|  +-----------------+  +------------------+ |                      v
+|                                            |  +------------------------------------------------------+
+|  +---------------+  +--------------------+ |  |                  SecurityFilterChain                 |
+|  | CSRF Protection|  | Session Management| |  |------------------------------------------------------|
+|  |               |  |                    | |  | - Configured with HttpSecurity settings              |
+|  | - csrf()      |  | - sessionCreation  | |  | - Multiple security filters                          |
+|  +---------------+  +--------------------+ |  +-------------------|----------------------------------+
+|                                            |                      |
+|  +---------------------+                   |                      v
+|  | Exception Handling  |                   |  +------------------------------------------------------+
+|  |                     |                   |  |                  Filter Chain                        |
+|  | - authenticationEntry|                  |  |------------------------------------------------------|
+|  | - accessDeniedHandler|                  |  | - SecurityContextPersistenceFilter                   |
+|  +---------------------+                   |  | - UsernamePasswordAuthenticationFilter               |
++--------------------------------------------+  | - BasicAuthenticationFilter                          |
+                                                 | - CsrfFilter                                         |
+                                                 | - LogoutFilter                                       |
+                                                 | - ExceptionTranslationFilter                         |
+                                                 | - FilterSecurityInterceptor                          |
+                                                 +-------------------|----------------------------------+
+                                                                       |
+                                                                       v
+                                                 +------------------------------------------------------+
+                                                 |                  Request Handling                    |
+                                                 |------------------------------------------------------|
+                                                 | - HTTP requests pass through the filter chain        |
+                                                 | - Filters apply security logic                       |
+                                                 | - Requests are processed and responses are returned  |
+                                                 +------------------------------------------------------+
+
+```
+  
+### SecurityFilterChain 
+보안 필터들을 특정 순서대로 구성하여 HTTP 요청과 응답을 처리하는 역할을 담당한다. **SecurityFilterChain**은 인터페이스이며 기본 구현체로는 **DefaultSecurityFilterChain** 이 있다.  
+
+HTTP 요청이 들어오면 SecurityFilterChain은 첫 번째 필터부터 마지막 필터까지 순차적으로 요청을 처리합니다. 각 필터는 요청을 가로채고 필요한 보안 작업을 수행한 후 다음 필터로 요청을 전달합니다. 만약 특정 필터에서 요청이 차단되거나 예외가 발생하면 그 즉시 필터 체인이 중단되고 적절한 응답이 반환됩니다.  
+
+### 1. **`getFilters`**
+
+```java
+List<Filter> getFilters();
+
+```
+
+- **설명**: 이 메서드는 필터 체인에 포함된 `Filter` 객체들의 리스트를 반환합니다.
+- **반환값**:
+    - `List<Filter>`: 필터 체인에 포함된 필터들의 리스트.
+### 2. **`matches`**
+
+```java
+boolean matches(HttpServletRequest request);
+
+```
+
+- **설명**: 이 메서드는 주어진 HTTP 요청이 이 **필터 체인에 매핑되는지 여부**를 확인합니다.
+- **매개변수**:
+    - `HttpServletRequest request`: 들어오는 HTTP 요청.
+- **반환값**:
+    - `boolean`: 요청이 이 필터 체인에 매핑되는 경우 `true`, 그렇지 않은 경우 `false`.
+  
+### WebSecurity (SecurityBuilder 의 구현체)
+WebSecurityConfiguration 에서 WebSecurity를 생성하고 초기화한다. WebSecurity 는 HttpSecurity 에서 생성한 SecurityFilterChain 빈을 SecurityBuilder 에 저장하고 build() 되었을때 SecurityBuilder 에서 SecurityFilterChain을 꺼내어 FilterChainProxy 생성자에 전달한다.  
+
+
+### WebSecurity 초기화 및 동작 흐름
+
+```scss
++-------------------------------+
+| Spring Application Context    |
+|  +-------------------------+  |
+|  | WebSecurityConfiguration |  |
+|  +-------------------------+  |
++-------------------------------+
+                |
+                v
++-------------------------------+
+| WebSecurity                  |
+|  +-------------------------+  |
+|  | HttpSecurity            |  |
+|  +-------------------------+  |
++-------------------------------+
+                |
+                v
++----------------------------------------+
+| HttpSecurity                           |
+|  +----------------------------------+  |
+|  | URL Authorization Rules          |  |
+|  | Login/Logout Configuration       |  |
+|  | CSRF Protection                  |  |
+|  +----------------------------------+  |
+|  | SecurityFilterChain (Bean)       |  |
+|  +----------------------------------+  |
++----------------------------------------+
+                |
+                v
++----------------------------------------+
+| SecurityBuilder                        |
+|  +----------------------------------+  |
+|  | Store SecurityFilterChain        |  |
+|  +----------------------------------+  |
+|  | Build SecurityFilterChain        |  |
+|  +----------------------------------+  |
++----------------------------------------+
+                |
+                v
++----------------------------------------+
+| FilterChainProxy                       |
+|  +----------------------------------+  |
+|  | SecurityFilterChain              |  |
+|  +----------------------------------+  |
++----------------------------------------+
+                |
+                v
++-------------------------+
+| HTTP Request            |
+|  /secure/data           |
++-------------------------+
+                |
+                v
++-------------------------+
+| FilterChainProxy        |
+|  +-------------------+  |
+|  | Auth Filter       |  |
+|  +-------------------+  |
+|  | CSRF Filter       |  |
+|  +-------------------+  |
+|  | Logout Filter     |  |
+|  +-------------------+  |
++-------------------------+
+                |
+                v
++-------------------------+
+| HTTP Response           |
+|  (Authenticated Data)   |
++-------------------------+
+
+```
+### 설명
+1. **Spring Application Context 초기화**: Spring 애플리케이션이 시작되고, `WebSecurityConfiguration` 빈이 생성되어 초기화됩니다.
+2. **WebSecurityConfiguration**: `WebSecurityConfiguration`에서 `WebSecurity`가 생성되고 초기화됩니다.
+3. **HttpSecurity 설정**: `HttpSecurity` 설정이 적용되고, `SecurityFilterChain` 빈이 생성됩니다.
+4. **SecurityFilterChain 빈 저장**: 생성된 `SecurityFilterChain` 빈이 `SecurityBuilder`에 저장됩니다.
+5. **SecurityBuilder 빌드**: `SecurityBuilder`가 빌드되면서 `SecurityFilterChain`을 가져옵니다.
+6. **FilterChainProxy 생성**: `SecurityFilterChain`이 `FilterChainProxy` 생성자에 전달되어 `FilterChainProxy`가 생성됩니다.
+7. **HTTP 요청 처리**: 요청이 `FilterChainProxy`를 통해 필터링되고, 각 필터가 순차적으로 실행되어 인증 및 인가 검사가 수행됩니다. 최종적으로 응답이 반환됩니다.
+  
+즉 `HttpSecurity` 가 여러설정들을 가지고 `SecurityFilterChain` 빈을 생성한다. 이렇게 생성된 필터들을 Client 에서 요청이 들어오면 해당 요청에 맞는 필터를 꺼내서 사용해야 하는데 이 작업을 `SecurityFilterChain` 이 직접 수행 하지 않고 `FilterChainProxy` 빈이 그 작업을 수행하게 된다.
+
+  

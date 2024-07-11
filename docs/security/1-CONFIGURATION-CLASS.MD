@@ -773,4 +773,166 @@ public class ExampleFilter implements Filter {
 HttpSecurity 를 통해서 API추가시 관련된 필터들이 추가되고 사용자의 요청을 필터 순서대로 호출함으로 보안 기능을 동작시키고 **필요 시 직접 필터를 생성해서 기존 필터 전,후로 추가 가능**하다.  
 
   
-![filterChainProxy.png](../img/filterChainProxy.png)
+![filterChainProxy.png](../img/filterChainProxy.png)  
+  
+### 코드 확인
+SecurityFilterAutoConfiguration(스프링 자동설정) 에서 DelegatingFilterProxy를 생성하는 부분을 보자:  
+```java
+    @Bean
+    @ConditionalOnBean(
+        name = {"springSecurityFilterChain"}
+    )
+    public DelegatingFilterProxyRegistrationBean securityFilterChainRegistration(SecurityProperties securityProperties) {
+        DelegatingFilterProxyRegistrationBean registration = 
+                new DelegatingFilterProxyRegistrationBean("springSecurityFilterChain", new ServletRegistrationBean[0]); // DelegatingFilterProxy 에서 "springSecurityFilterChain"이름의 빈을 찾아서 요청을 위임
+        registration.setOrder(securityProperties.getFilter().getOrder());
+        registration.setDispatcherTypes(this.getDispatcherTypes(securityProperties));
+        return registration;
+    }
+```
+
+`DelegatingFilterProxyRegistrationBean` 해당 클레스에서 `DelegatingFilterProxy`를 생성한다.:  
+```java
+public class DelegatingFilterProxyRegistrationBean extends AbstractFilterRegistrationBean<DelegatingFilterProxy> implements ApplicationContextAware {
+    //..
+    public DelegatingFilterProxy getFilter() { // DelegatingFilterProxy 를 생성할때 빈 이름과, getWebApplicationContext 를 넘겨줌으로써 특정 빈 이름을 스프링에서 찾겠다는 의미이고 여기서는 springSecurityFilterChain 이라는 빈 이름을 찾는다.
+        return new DelegatingFilterProxy(this.targetBeanName, this.getWebApplicationContext()) {
+            protected void initFilterBean() throws ServletException {
+            }
+        };
+    }
+}
+```
+이렇게 생성된 객체를 `servletContext`에 등록하는 것을 확인할 수 있다.
+```java
+public abstract class AbstractFilterRegistrationBean<T extends Filter> extends DynamicRegistrationBean<FilterRegistration.Dynamic> {
+    //..
+    protected FilterRegistration.Dynamic addRegistration(String description, ServletContext servletContext) {
+        Filter filter = this.getFilter();
+        return servletContext.addFilter(this.getOrDeduceName(filter), filter);
+    }
+}
+```
+`DelegatingFilterProxy` 는 스프링에서 활용은 하지만 실질적으로 `servletContext`에 추가되는 필터임을 소스상에서 확인할 수 있다.  
+  
+앞에서 우리는 `WebSecurityConfiguration`에서 `WebSecurity` 에서 build() 메서드를 통해서 `FilterChinProxy`를 생성함을 확인했다.  
+근데 여기서 우리가 생성하는 이 `FilterChinProxy`의 빈 이름을 확인해보면  
+```java
+    @Bean(
+        name = {"springSecurityFilterChain"}
+    )
+    public Filter springSecurityFilterChain() throws Exception {
+    boolean hasFilterChain = !this.securityFilterChains.isEmpty();
+    if (!hasFilterChain) {
+        this.webSecurity.addSecurityFilterChainBuilder(() -> {
+            this.httpSecurity.authorizeHttpRequests((authorize) -> {
+                ((AuthorizeHttpRequestsConfigurer.AuthorizedUrl) authorize.anyRequest()).authenticated();
+            });
+            this.httpSecurity.formLogin(Customizer.withDefaults());
+            this.httpSecurity.httpBasic(Customizer.withDefaults());
+            return (SecurityFilterChain) this.httpSecurity.build();
+        });
+    }
+}
+```
+`springSecurityFilterChain`이라는 이름으로 빈을 생성하는 것을 확인할 수 있다. 그렇기 때문에 `DelegatingFilterProxy`는 `springSecurityFilterChain`이라는 이름의 빈을 스프링에서 찾을 수 있는 것이다.  
+  
+실제 요청을 보내서 `DelegatingFilterProxy`의 doFilter에서  
+```java
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        Filter delegateToUse = this.delegate;
+        if (delegateToUse == null) {
+            synchronized(this.delegateMonitor) {
+                delegateToUse = this.delegate; // 위임할 필터를 찾음
+                if (delegateToUse == null) { // 없다면
+                    WebApplicationContext wac = this.findWebApplicationContext(); // 스프링 컨텍스트에서 필터를 찾음
+                    if (wac == null) {
+                        throw new IllegalStateException("No WebApplicationContext found: no ContextLoaderListener or DispatcherServlet registered?");
+                    }
+
+                    delegateToUse = this.initDelegate(wac); // 빈이름 찾음
+                }
+
+                this.delegate = delegateToUse;
+            }
+        }
+
+        this.invokeDelegate(delegateToUse, request, response, filterChain);
+    }
+```
+```java
+    protected Filter initDelegate(WebApplicationContext wac) throws ServletException {
+        String targetBeanName = this.getTargetBeanName();
+        Assert.state(targetBeanName != null, "No target bean name set");
+        Filter delegate = (Filter)wac.getBean(targetBeanName, Filter.class);
+        if (this.isTargetFilterLifecycle()) {
+            delegate.init(this.getFilterConfig());
+        }
+
+        return delegate;
+    }
+
+```  
+![img_3.png](../img/img_3.png)  
+위에 처럼 `springSecurityFilterChain`이라는 이름으로 빈을 가지고 와서 해당 필터를 호출한다.  
+  
+이렇게 요청에 대해서 해당 필터에 위임을 하면 해당 필터에서 요청에 대해 처리한다.  
+![img_3.png](../img/img_4.png)  
+이렇게 위임받은 요청을 FilterChinProxy 에서 설정되어있는 필터를 순차적으로 호출하면서 요청에 대해 처리를 한다.  
+```java 
+private void doFilterInternal(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    FirewalledRequest firewallRequest = this.firewall.getFirewalledRequest((HttpServletRequest) request);
+    HttpServletResponse firewallResponse = this.firewall.getFirewalledResponse((HttpServletResponse) response);
+    List<Filter> filters = this.getFilters((HttpServletRequest) firewallRequest);
+    if (filters != null && filters.size() != 0) {
+        if (logger.isDebugEnabled()) {
+            logger.debug(LogMessage.of(() -> {
+                return "Securing " + requestLine(firewallRequest);
+            }));
+        }
+
+        FilterChain reset = (req, res) -> {
+            if (logger.isDebugEnabled()) {
+                logger.debug(LogMessage.of(() -> {
+                    return "Secured " + requestLine(firewallRequest);
+                }));
+            }
+
+            firewallRequest.reset();
+            chain.doFilter(req, res);
+        };
+        this.filterChainDecorator.decorate(reset, filters).doFilter(firewallRequest, firewallResponse);
+    }//....
+    
+    //....
+
+    private static final class VirtualFilterChain implements FilterChain {
+        private final FilterChain originalChain;
+        private final List<Filter> additionalFilters;
+        private final int size;
+        private int currentPosition = 0;
+
+        private VirtualFilterChain(FilterChain chain, List<Filter> additionalFilters) {
+            this.originalChain = chain;
+            this.additionalFilters = additionalFilters;
+            this.size = additionalFilters.size();
+        }
+
+        public void doFilter(ServletRequest request, ServletResponse response) throws IOException, ServletException {
+            if (this.currentPosition == this.size) {
+                this.originalChain.doFilter(request, response);
+            } else {
+                ++this.currentPosition;
+                Filter nextFilter = (Filter)this.additionalFilters.get(this.currentPosition - 1);
+                if (FilterChainProxy.logger.isTraceEnabled()) {
+                    String name = nextFilter.getClass().getSimpleName();
+                    FilterChainProxy.logger.trace(LogMessage.format("Invoking %s (%d/%d)", name, this.currentPosition, this.size));
+                }
+
+                nextFilter.doFilter(request, response, this); // 필터를 순차적으로 처리
+            }
+        }
+    }
+}
+```
+이렇게 모든 작업을 완료한 후에 `servlet`에 전달된다.

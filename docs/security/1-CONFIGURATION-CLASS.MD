@@ -566,4 +566,211 @@ protected Filter performBuild() throws Exception {
 }
 
 ```
-이렇게 최종적으로 `FilterChainProxy`가 생성된다.
+이렇게 최종적으로 `FilterChainProxy`가 생성된다.  
+  
+## DelegatingFilterProxy 와 FilterChainProxy
+### Filter
+서블릿 필터는 웹 애플리케이션에서 클라이언트 요청과 서버의 응답을 가공하거나 검사하는데 사용되는 구성 요소로 클라이언트 요청이 서블릿에 도달하기 전이나 응답을 클라이언트에게 보내기 전에 특정 작업을 수행할 수 있다.  
+  
+서블릿 필터는 서블릿 컨테이너(WAS)에서 생성되고 실행되고 종료된다.  
+![filterchain.png](../img/filterchain.png)  
+
+```java 
+public interface Filter {
+    default void init(FilterConfig filterConfig) throws ServletException {
+    }
+
+    void doFilter(ServletRequest var1, ServletResponse var2, FilterChain var3) throws IOException, ServletException;
+
+    default void destroy() {
+    }
+}
+```
+1. **`init(FilterConfig filterConfig)`**
+
+```java
+void init(FilterConfig filterConfig) throws ServletException;
+
+```
+
+- **설명**: 필터가 서블릿 컨테이너에 의해 초기화될 때 호출됩니다. 필터가 서비스에 투입될 때 필요한 초기화 작업을 수행하는 데 사용됩니다.
+- **매개변수**:
+    - `FilterConfig filterConfig`: 필터에 대한 초기화 매개변수를 포함하는 객체입니다. 이를 통해 초기화 파라미터나 서블릿 컨텍스트에 접근할 수 있습니다.
+- **예외**:
+    - `ServletException`: 초기화 과정에서 발생할 수 있는 예외입니다.
+- **용도**:
+    - 필터가 시작될 때 리소스 설정, 초기화 파라미터 읽기, 초기 상태 설정 등을 수행합니다.
+
+**예제**:
+
+```java
+@Override
+public void init(FilterConfig filterConfig) throws ServletException {
+    String initParam = filterConfig.getInitParameter("exampleParam");
+    // 초기화 작업 수행
+}
+
+```
+
+1. **`doFilter(ServletRequest request, ServletResponse response, FilterChain chain)`**
+
+```java
+void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+        throws IOException, ServletException;
+
+```
+
+- **설명**: 클라이언트 요청이 필터를 통과할 때마다 호출됩니다. 요청과 응답을 필터링하거나 수정할 수 있습니다.
+- **매개변수**:
+    - `ServletRequest request`: 클라이언트로부터의 요청을 나타내는 객체입니다.
+    - `ServletResponse response`: 클라이언트에게 보낼 응답을 나타내는 객체입니다.
+    - `FilterChain chain`: 다음 필터를 호출하거나 최종적으로 서블릿을 호출하는 데 사용됩니다.
+- **예외**:
+    - `IOException`: 입출력 예외입니다.
+    - `ServletException`: 서블릿 예외입니다.
+- **용도**:
+    - 요청을 전처리하거나 응답을 후처리합니다.
+    - 로깅, 인증, 인가, 데이터 압축, 응답 수정 등 다양한 용도로 사용됩니다.
+
+**예제**:
+
+```java
+@Override
+public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+        throws IOException, ServletException {
+    // 요청 전처리 작업 수행
+    chain.doFilter(request, response);
+    // 응답 후처리 작업 수행
+}
+
+```
+
+1. **`destroy()`**
+
+```java
+void destroy();
+
+```
+
+- **설명**: 필터가 서블릿 컨테이너에 의해 제거될 때 호출됩니다. 필터가 서비스에서 제거될 때 필요한 정리 작업을 수행하는 데 사용됩니다.
+- **용도**:
+    - 필터가 종료될 때 리소스를 해제하거나 정리 작업을 수행합니다.
+    - 데이터베이스 연결 해제, 스레드 종료, 메모리 정리 등.
+
+**예제**:
+
+```java
+@Override
+public void destroy() {
+    // 정리 작업 수행
+}
+
+```
+
+### 전체 예제
+
+아래는 세 메서드를 모두 포함하는 필터의 전체 예제입니다:
+
+```java
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import java.io.IOException;
+
+public class ExampleFilter implements Filter {
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        String initParam = filterConfig.getInitParameter("exampleParam");
+        // 초기화 작업 수행
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        // 요청 전처리 작업 수행, ServletRequest 수정
+        System.out.println("Request processing starts");
+
+        chain.doFilter(request, response);
+
+        // 응답 후처리 작업 수행, ServletResponse 수정
+        System.out.println("Response processing starts");
+    }
+
+    @Override
+    public void destroy() {
+        // 정리 작업 수행, 필터가 제거될 때 필요한 작업 수행
+        System.out.println("Filter is being destroyed");
+    }
+}
+
+```
+
+### 요약
+
+- **`init(FilterConfig filterConfig)`**: 필터 초기화 메서드로, 초기 설정 작업을 수행합니다.
+- **`doFilter(ServletRequest request, ServletResponse response, FilterChain chain)`**: 요청/응답을 처리하는 메서드로, 필터 체인의 중심 역할을 합니다.
+- **`destroy()`**: 필터 종료 시 호출되는 메서드로, 정리 작업을 수행합니다.  
+   
+### 서블릿 컨테이너 와 웹 컨테이너
+### 서블릿 컨테이너 (Servlet Container)
+
+서블릿 컨테이너는 Java 서블릿을 실행하고 관리하는 컴포넌트입니다. 서블릿 컨테이너는 주로 다음과 같은 작업을 수행합니다:
+
+- **서블릿 생명주기 관리**: 서블릿의 생성, 초기화, 요청 처리, 소멸을 관리합니다.
+- **요청/응답 처리**: HTTP 요청을 서블릿에 전달하고, 서블릿의 응답을 클라이언트에게 반환합니다.
+- **서블릿 환경 제공**: 서블릿이 실행될 수 있는 환경을 제공합니다. 예를 들어, HTTP 요청 및 응답 객체, 세션 관리 등을 제공합니다.
+
+대표적인 서블릿 컨테이너:
+
+- Apache Tomcat
+- Jetty
+
+### 웹 컨테이너 (Web Container)
+
+웹 컨테이너는 더 넓은 범위의 개념으로, 서블릿 컨테이너를 포함하는 개념입니다. 웹 컨테이너는 Java EE (Enterprise Edition) 애플리케이션 서버의 일부로, 다음과 같은 컴포넌트를 포함하고 관리합니다:
+
+- **서블릿**: Java 서블릿을 관리하고 실행합니다 (서블릿 컨테이너의 역할).
+- **JSP (JavaServer Pages)**: JSP 파일을 서블릿으로 컴파일하고 실행합니다.
+- **웹 서비스**: SOAP 및 RESTful 웹 서비스 등을 관리합니다.
+- **다른 웹 관련 컴포넌트**: 필터, 리스너, 웹 소켓 등 다양한 웹 기술을 지원합니다.
+
+대표적인 웹 컨테이너:
+
+- Apache Tomcat (서블릿 컨테이너이면서 웹 컨테이너로도 사용됨)
+- Jetty (서블릿 컨테이너이면서 웹 컨테이너로도 사용됨)
+- JBoss/WildFly
+- GlassFish
+- WebSphere
+
+### 요약 및 차이점
+
+- **서블릿 컨테이너**:
+    - 주로 Java 서블릿을 관리하고 실행합니다.
+    - HTTP 요청/응답 처리를 중심으로 서블릿의 생명주기를 관리합니다.
+- **웹 컨테이너**:
+    - 서블릿 컨테이너를 포함하는 더 넓은 개념입니다.
+    - JSP, 웹 서비스, 필터, 리스너 등 다양한 웹 관련 기술을 지원합니다.
+    - Java EE 애플리케이션 서버의 일부분으로 작동합니다.
+  
+  
+### DelegatingFilterProxy
+`DelegatingFilterProxy`는 스프링에서 사용되는 특별한 서블릿 필터로, 서블릿 컨테이너와 스프링 애플리케이션 컨텍스트 간의 연결고리 역할을 하는 필터이다. `DelegatingFilterProxy`는 서블릿 필터의 기능을 수행하는 동시에 스프링의 의존성 주입 및 빈 관리 기능과 연동되도록 설계된 필터이다.  
+
+`DelegatingFilterProxy`는 `SpringSecurityFilerChain` 이름으로 생성된 빈을 `ApplicationContext` 에서 찾아서 요청을 위임한다. 즉, 직접 보안 처리를 수행하지는 않는다.  
+![delegationFiletrChain.png](../img/delegatingfilterproxy.png)  
+
+스프링 시큐리티는**서블릿의 필터**를 기반으로 동작한다. 사용자의 요청이 서블릿에 전달되기 전, 스프링 시큐리티는 필터의 생명주기를 이용해서 인증과 권한 작업을 수행 하지만, **서블릿 컨테이너는 스프링 컨테이너에 등록된 빈을 인식할 수 없다.** 그렇기 때문에 스프링 시큐리티에서는 **DelegatingFilterProxy** 라는 서블릿 필터의 구현체를 제공한다.  
+
+`DelegatingFilterProxy` 는 **서블릿 매커니즘으로 서블릿의 필터로 등록될 수 있으며**, 스프링에 등록된 빈을 가져와서 의존성을 주입할 수도 있다. 결론적으로 서블릿 컨테이너의 생명주기와 스프링의 ApplicationContext 사이를 연결하는 다리 역할을 하게된다.  
+  
+### FilterChainProxy
+`SprigSecurityFilterChain`의 이름으로 생성된 필터 빈으로 `DelegatingFilterProxy`로 부터 요청을 위임받고 실제 보안처리 역할을 담당한다. 내부적으로 하나 의상의 SecurityFilterChain 객체들을 가지고 있으며 요청 URL 정보를 기준으로 적절한 `SecurityFilterChain`을 선택하여 필터를 호출한다.  
+  
+HttpSecurity 를 통해서 API추가시 관련된 필터들이 추가되고 사용자의 요청을 필터 순서대로 호출함으로 보안 기능을 동작시키고 **필요 시 직접 필터를 생성해서 기존 필터 전,후로 추가 가능**하다.  
+
+  
+![filterChainProxy.png](../img/filterChainProxy.png)

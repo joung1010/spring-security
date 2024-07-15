@@ -935,4 +935,243 @@ private void doFilterInternal(ServletRequest request, ServletResponse response, 
     }
 }
 ```
-이렇게 모든 작업을 완료한 후에 `servlet`에 전달된다.
+이렇게 모든 작업을 완료한 후에 `servlet`에 전달된다.  
+  
+## 사용자 정의 구현
+한 개 이상의 SecurityFilterChain 타입의 빈을 정의한 후 인증 API 및 인가 API를 설정  
+0. **`@EnableWebSecurity 어노테이션을 먼저 선언한다.`**
+1. **`SecurityFilterChain 빈을 정의`**
+2. **`HttpSecurity`** 빈생성시 의존성으로 주입 받은 **`SecurityFilterChain`** 설정을 이용해서 웹 보안을 구성(인증, 인가)
+
+### 인증 (Authentication) 설정
+
+### 1.1. 폼 로그인 설정 (Form Login)
+
+```java
+http
+    .formLogin()
+        .loginPage("/login")
+        .loginProcessingUrl("/perform_login")
+        .defaultSuccessUrl("/home", true)
+        .failureUrl("/login?error=true")
+        .permitAll();
+
+```
+
+- **`loginPage("/login")`**: 사용자 정의 로그인 페이지의 URL을 지정합니다.
+- **`loginProcessingUrl("/perform_login")`**: 로그인 폼의 action 속성 URL을 지정합니다.
+- **`defaultSuccessUrl("/home", true)`**: 로그인 성공 시 이동할 페이지를 지정합니다.
+- **`failureUrl("/login?error=true")`**: 로그인 실패 시 이동할 페이지를 지정합니다.
+- **`permitAll()`**: 로그인 페이지는 인증되지 않은 사용자도 접근할 수 있도록 허용합니다.
+
+### 1.2. 로그아웃 설정 (Logout)
+
+```java
+http
+    .logout()
+        .logoutUrl("/logout")
+        .logoutSuccessUrl("/login?logout=true")
+        .deleteCookies("JSESSIONID")
+        .invalidateHttpSession(true)
+        .permitAll();
+
+```
+
+- **`logoutUrl("/logout")`**: 로그아웃을 처리할 URL을 지정합니다.
+- **`logoutSuccessUrl("/login?logout=true")`**: 로그아웃 성공 시 이동할 페이지를 지정합니다.
+- **`deleteCookies("JSESSIONID")`**: 로그아웃 시 삭제할 쿠키를 지정합니다.
+- **`invalidateHttpSession(true)`**: 로그아웃 시 현재 세션을 무효화합니다.
+- **`permitAll()`**: 로그아웃 URL은 모든 사용자가 접근할 수 있도록 허용합니다.
+
+### 1.3. CSRF 보호 설정 (CSRF Protection)
+
+```java
+http
+    .csrf()
+        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+
+```
+
+- **`csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())`**: CSRF 토큰을 쿠키에 저장하고, HttpOnly 속성을 `false`로 설정합니다. 기본적으로 CSRF 보호를 활성화합니다.
+
+### 1.4. HTTP 기본 인증 설정 (HTTP Basic Authentication)
+
+```java
+http
+    .httpBasic();
+
+```
+
+- **`httpBasic()`**: HTTP Basic 인증을 활성화합니다. 이 방식은 HTTP 요청의 헤더에 사용자 이름과 비밀번호를 Base64로 인코딩하여 전송합니다.
+
+### 1.5. 세션 관리 설정 (Session Management)
+
+```java
+http
+    .sessionManagement()
+        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+        .maximumSessions(1)
+        .expiredUrl("/session-expired")
+        .and()
+        .sessionFixation().migrateSession();
+
+```
+
+- **`sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)`**: 필요 시에만 세션을 생성합니다.
+- **`maximumSessions(1)`**: 동시에 하나의 세션만 허용합니다.
+- **`expiredUrl("/session-expired")`**: 세션이 만료되었을 때 이동할 페이지를 지정합니다.
+- **`sessionFixation().migrateSession()`**: 인증 후에 새로운 세션을 생성하고 기존 세션 속성을 새 세션으로 복사합니다.
+
+### 1.6. 기억하기 설정 (Remember Me)
+
+```java
+http
+    .rememberMe()
+        .tokenValiditySeconds(86400)
+        .key("mySecretKey")
+        .rememberMeParameter("remember-me");
+
+```
+
+- **`tokenValiditySeconds(86400)`**: Remember Me 쿠키의 유효기간을 초 단위로 지정합니다. 여기서는 1일(86400초)입니다.
+- **`key("mySecretKey")`**: Remember Me 기능을 위한 키를 지정합니다.
+- **`rememberMeParameter("remember-me")`**: Remember Me 기능을 활성화하는 파라미터를 지정합니다.
+
+### 인가 (Authorization) 설정
+
+### 2.1. 접근 권한 설정 (URL Access Control)
+
+```java
+http
+    .authorizeRequests()
+        .antMatchers("/admin/**").hasRole("ADMIN")
+        .antMatchers("/user/**").hasRole("USER")
+        .antMatchers("/public/**").permitAll()
+        .anyRequest().authenticated();
+
+```
+
+- **`antMatchers("/admin/**").hasRole("ADMIN")`**: `/admin/**` 경로는 `ADMIN` 역할을 가진 사용자만 접근할 수 있습니다.
+- **`antMatchers("/user/**").hasRole("USER")`**: `/user/**` 경로는 `USER` 역할을 가진 사용자만 접근할 수 있습니다.
+- **`antMatchers("/public/**").permitAll()`**: `/public/**` 경로는 모든 사용자가 접근할 수 있습니다.
+- **`anyRequest().authenticated()`**: 위에 명시되지 않은 모든 요청은 인증된 사용자만 접근할 수 있습니다.
+
+### 2.2. 특정 URL 요청 설정 (Specific URL Requests)
+
+```java
+http
+    .authorizeRequests()
+        .antMatchers("/api/**").hasAuthority("API_USER")
+        .antMatchers("/management/**").access("hasRole('ADMIN') and hasIpAddress('192.168.1.0/24')")
+        .anyRequest().authenticated();
+
+```
+
+- **`antMatchers("/api/**").hasAuthority("API_USER")`**: `/api/**` 경로는 `API_USER` 권한을 가진 사용자만 접근할 수 있습니다.
+- **`antMatchers("/management/**").access("hasRole('ADMIN') and hasIpAddress('192.168.1.0/24')")`**: `/management/**` 경로는 `ADMIN` 역할을 가지며 특정 IP 주소 범위에서 접근한 사용자만 접근할 수 있습니다.
+- **`anyRequest().authenticated()`**: 위에 명시되지 않은 모든 요청은 인증된 사용자만 접근할 수 있습니다.
+
+### 2.3. 접근 거부 처리 (Access Denied Handling)
+
+```java
+http
+    .exceptionHandling()
+        .accessDeniedPage("/403");
+
+```
+
+- **`accessDeniedPage("/403")`**: 접근 거부(Authorization) 시 이동할 페이지를 지정합니다.
+
+### 2.4. 사용자 정의 접근 결정 (Custom Access Decision)
+
+```java
+http
+    .authorizeRequests()
+        .antMatchers("/custom/**").access("@customAccessDecisionService.hasPermission(request, authentication)")
+        .anyRequest().authenticated();
+
+```
+
+- **`access("@customAccessDecisionService.hasPermission(request, authentication)")`**: 커스텀 접근 결정 서비스를 사용하여 접근 권한을 결정합니다.
+
+### 2.5. 필터 기반 인가 설정 (Filter-Based Authorization)
+
+```java
+http
+    .authorizeRequests()
+        .antMatchers("/filter/**").hasRole("FILTER_USER")
+        .anyRequest().authenticated()
+        .and()
+    .addFilterBefore(new CustomFilter(), UsernamePasswordAuthenticationFilter.class);
+
+```
+
+- **`addFilterBefore(new CustomFilter(), UsernamePasswordAuthenticationFilter.class)`**: 커스텀 필터를 특정 필터 앞에 추가합니다.  
+  
+  
+### 구현
+
+```java
+
+@EnableWebSecurity
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.authorizeRequests(auth -> auth.anyRequest().authenticated())
+                .formLogin(Customizer.withDefaults());
+        return http.build();
+    }
+}
+
+```
+`@EnableWebSecurity` 어노테이션 클레스를 정의하고 모든 설정은 람다형식으로 작성해야한다(스프링 시큐리티 7 버전부터는 람다 형식만 지원) 하나 이상의 SecurityFilterChain 빈을 정의하게 되면 자동설정에 의한 SecurityFilterChain 빈은 생성되지 않는다.
+
+> ### @EnableWebSecurity  
+> Spring Security 설정을 활성화하는 어노테이션입니다. 이 어노테이션을 사용함으로써 Spring Security의 기본 설정이 활성화되고, 이를 통해 애플리케이션의 보안을 관리할 수 있습니다.  
+> ### 주요 기능
+> 1. **Spring Security 설정 활성화**:
+     - `@EnableWebSecurity`는 Spring Security 설정을 활성화합니다. 이 어노테이션이 선언된 클래스는 Spring Security의 설정을 정의하는 클래스가 됩니다.
+> 2. **WebSecurityConfigurerAdapter 확장 지원**:
+     - `@EnableWebSecurity`를 사용하면 `WebSecurityConfigurerAdapter`를 확장하여 보안 설정을 커스터마이징할 수 있습니다. `WebSecurityConfigurerAdapter`는 Spring Security의 설정을 오버라이드하여 원하는 대로 커스터마이징할 수 있는 메서드들을 제공합니다.
+     - 하지만 Spring Security 5.4부터는 `WebSecurityConfigurerAdapter` 대신 `SecurityFilterChain`을 사용하는 방식으로 변경되었습니다.
+> 3. **보안 필터 체인 등록**:
+     - `@EnableWebSecurity`는 애플리케이션의 보안 필터 체인을 등록합니다. 이를 통해 애플리케이션의 모든 요청은 Spring Security 필터를 거치게 됩니다.
+     - 보안 필터 체인은 인증(Authentication)과 인가(Authorization) 등 다양한 보안 기능을 처리합니다.
+> 4. **기본 보안 설정 제공**:
+     - 이 어노테이션을 사용하면 Spring Security의 기본 설정이 적용됩니다. 기본 설정에는 세션 관리, CSRF 보호, 폼 로그인 등이 포함됩니다.
+     - 기본 설정을 사용자가 원하는 대로 커스터마이징할 수 있습니다.
+  
+
+### 사용자 추가 설정
+스프링 시큐리티가 제공하는 기본 사용자 뿐만아니라 우리가 직접 사용자에 대한 추가 설정을 할 수 있다.  
+application.properties 또는 application.yml 파일 설정:
+```yml
+spring:
+  security:
+    user:
+      name: YOUR_USER
+      password: YOUR_PASSWORD
+      role: USER
+```
+  
+자바 설정 클래스에 직접 정의:  
+```java
+ @Bean
+    public UserDetailsService userDetailsService() {
+        UserDetails user = User.withDefaultPasswordEncoder()
+            .username("user")
+            .password("password")
+            .roles("USER")
+            .build();
+
+    UserDetails admin = User.withDefaultPasswordEncoder()
+            .username("admin")
+            .password("admin")
+            .roles("ADMIN")
+            .build();
+        
+        return new InMemoryUserDetailsManager(user,admin);
+    }
+```

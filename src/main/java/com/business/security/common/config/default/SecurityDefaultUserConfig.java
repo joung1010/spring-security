@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config;
 
 import lombok.extern.slf4j.Slf4j;
@@ -12,18 +13,20 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
+*/
 /**
  * <b>  </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2024-07-15
- */
+ *//*
+
 
 @Slf4j
 @EnableWebSecurity
 @Configuration
-public class SecurityConfigBasic {
+public class SecurityDefaultUserConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -57,3 +60,4 @@ public class SecurityConfigBasic {
         return new InMemoryUserDetailsManager(user,user2,user3);
     }
 }
+*/

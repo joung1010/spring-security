@@ -1,3 +1,6 @@
 spring:
   application:
   name: spring-security
+  profiles:
+    default: local
+    active: ${spring.profiles.default}

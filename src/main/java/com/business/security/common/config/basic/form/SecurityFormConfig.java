@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.form;
 
 import jakarta.servlet.ServletException;
@@ -20,13 +21,15 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 
 import java.io.IOException;
 
+*/
 /**
  * <b>  </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2024-07-23
- */
+ *//*
+
 @Slf4j
 @EnableWebSecurity
 @Configuration
@@ -74,3 +77,4 @@ public class SecurityFormConfig {
         return new InMemoryUserDetailsManager(user);
     }
 }
+*/

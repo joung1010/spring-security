@@ -1,7 +1,5 @@
-/*
-package com.business.security.common.config.basic.rememberme;
+package com.business.security.common.config.basic.annonymous;
 
-import com.business.security.common.config.basic.httpBasic.CustomAuthenticationEntryPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,37 +12,31 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
-*/
 /**
- * <b> SecurityRememberMeConfig </b>
+ * <b> SecurityAnonymousConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
- * @since 2024-08-13
- *//*
-
+ * @since 2024-08-20
+ */
 
 @Slf4j
 @EnableWebSecurity
 @Configuration
-public class SecurityRememberMeConfig {
-    public static final String SECURITY_FILTER_CHAIN_NAME = "security-filter-chain";
+public class SecurityAnonymousConfig {
 
-    @Bean(SECURITY_FILTER_CHAIN_NAME)
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+
+        http.authorizeRequests(auth -> auth
+                        .requestMatchers("/anonymous").hasRole("GUEST")
+                        .requestMatchers("/anonymousContext", "/authentication").permitAll()
+                        .anyRequest().authenticated())
                 .formLogin(Customizer.withDefaults())
-                .rememberMe(rememberMeConfigurer ->
-                                rememberMeConfigurer
-                                        .alwaysRemember(true) // 항상 기억하기 인증을 활성화 시킴(체크박스 없이도)
-                                        .tokenValiditySeconds(3600) // 토큰 유지시간 (밀리세컨드)
-                                        .userDetailsService(userDetailsService())
-                                        .rememberMeParameter("remember")
-                                        .rememberMeCookieName("remember")
-                                        .key("myKey-security")
-                        )
-        ;
+                .anonymous(anonymous -> anonymous
+                        .principal("guest")
+                        .authorities("ROLE_GUEST")
+                );
 
         return http.build();
     }
@@ -58,6 +50,4 @@ public class SecurityRememberMeConfig {
 
         return new InMemoryUserDetailsManager(user);
     }
-
 }
-*/

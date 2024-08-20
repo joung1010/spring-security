@@ -34,7 +34,7 @@ public class SecurityRememberMeConfig {
                 .formLogin(Customizer.withDefaults())
                 .rememberMe(rememberMeConfigurer ->
                                 rememberMeConfigurer
-//                                        .alwaysRemember(true) // 항상 기억하기 인증을 활성화 시킴(체크박스 없이도)
+                                        .alwaysRemember(true) // 항상 기억하기 인증을 활성화 시킴(체크박스 없이도)
                                         .tokenValiditySeconds(3600) // 토큰 유지시간 (밀리세컨드)
                                         .userDetailsService(userDetailsService())
                                         .rememberMeParameter("remember")

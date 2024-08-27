@@ -39,13 +39,14 @@ public class SecurityLogoutConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http.authorizeRequests(auth -> auth
+                        .requestMatchers("logoutSuccess").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
+//                .csrf(csrf -> csrf.disable())
                 .logout(logout -> logout
-//                        .logoutUrl("/logoutProc")
-//                        .logoutRequestMatcher(new AntPathRequestMatcher("/logoutProc","POST"))
-                        .logoutSuccessUrl("/logoutSuccess")
+                        .logoutUrl("/logout")
+                        .logoutRequestMatcher(new AntPathRequestMatcher("/logout","POST"))
+                        .logoutSuccessUrl("/logoutSuccess") // 그냥 접속하면 접근이 불가능
                         .logoutSuccessHandler(new LogoutSuccessHandler() {
                             @Override
                             public void onLogoutSuccess(HttpServletRequest request

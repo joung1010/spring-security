@@ -1,5 +1,4 @@
-/*
-package com.business.security.common.config.basic.logout;
+package com.business.security.common.config.basic.requestcache;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,66 +16,50 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.io.IOException;
 
-*/
 /**
  * <b> SecurityAnonymousConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2024-08-20
- *//*
-
+ */
 
 @Slf4j
 @EnableWebSecurity
 @Configuration
-public class SecurityLogoutConfig {
+public class SecurityCacheConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+        HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
+        requestCache.setMatchingRequestParameterName("customParam=y");
+
         http.authorizeRequests(auth -> auth
                         .requestMatchers("logoutSuccess").permitAll()
                         .anyRequest().authenticated())
-                .formLogin(Customizer.withDefaults())
-//                .csrf(csrf -> csrf.disable())
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutRequestMatcher(new AntPathRequestMatcher("/logout","POST"))
-                        .logoutSuccessUrl("/logoutSuccess") // 그냥 접속하면 접근이 불가능
-                        .logoutSuccessHandler(new LogoutSuccessHandler() {
-                            @Override
-                            public void onLogoutSuccess(HttpServletRequest request
-                                    , HttpServletResponse response
-                                    , Authentication authentication) throws IOException, ServletException {
+                .formLogin(form -> form.successHandler(new AuthenticationSuccessHandler() {
+                    @Override
+                    public void onAuthenticationSuccess(HttpServletRequest request,
+                                                        HttpServletResponse response,
+                                                        Authentication authentication) throws IOException, ServletException {
 
-                                response.sendRedirect("/logoutSuccess");
-                            }
-                        })
-                        .deleteCookies("JSESSIONID","remember-me")
-                        .invalidateHttpSession(true)
-                        .clearAuthentication(true)
-                        .addLogoutHandler(new LogoutHandler() {
-                            @Override
-                            public void logout(HttpServletRequest request
-                                    , HttpServletResponse response
-                                    , Authentication authentication) {
-
-                                request.getSession().invalidate(); // 세션 무효
-                                SecurityContextHolder.getContextHolderStrategy().getContext().setAuthentication(null); // 인증 삭제
-                                SecurityContextHolder.getContextHolderStrategy().clearContext();
-
-
-                            }
-                        })
-                        .permitAll()
-                );
+                        SavedRequest savedRequest = requestCache.getRequest(request, response);
+                        String redirectUrl = savedRequest.getRedirectUrl();
+                        response.sendRedirect(redirectUrl);
+                    }
+                }))
+                .requestCache(cache -> cache.requestCache(requestCache))
+        ;
 
 
         return http.build();
@@ -92,4 +75,3 @@ public class SecurityLogoutConfig {
         return new InMemoryUserDetailsManager(user);
     }
 }
-*/

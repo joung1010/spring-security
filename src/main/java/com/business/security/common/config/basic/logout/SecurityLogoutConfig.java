@@ -41,9 +41,10 @@ public class SecurityLogoutConfig {
         http.authorizeRequests(auth -> auth
                         .anyRequest().authenticated())
                 .formLogin(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
                 .logout(logout -> logout
-                        .logoutUrl("/logoutProc")
-                        .logoutRequestMatcher(new AntPathRequestMatcher("/logoutProc","POST"))
+//                        .logoutUrl("/logoutProc")
+//                        .logoutRequestMatcher(new AntPathRequestMatcher("/logoutProc","POST"))
                         .logoutSuccessUrl("/logoutSuccess")
                         .logoutSuccessHandler(new LogoutSuccessHandler() {
                             @Override

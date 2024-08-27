@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.basic.annonymous;
 
 import lombok.extern.slf4j.Slf4j;
@@ -12,13 +13,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
+*/
 /**
  * <b> SecurityAnonymousConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2024-08-20
- */
+ *//*
+
 
 @Slf4j
 @EnableWebSecurity
@@ -51,3 +54,4 @@ public class SecurityAnonymousConfig {
         return new InMemoryUserDetailsManager(user);
     }
 }
+*/

@@ -1,4 +1,4 @@
-package com.business.security.business.authentication.form.controller;
+package com.business.security.business.authentication.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;

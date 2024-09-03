@@ -1,4 +1,4 @@
-package com.business.security.common.config.basic.httpBasic;
+package com.business.security.common.config.basic.authentication.process.httpBasic;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -35,13 +35,13 @@
   
 ### 기본 설정기능을 확인해 보기
 기본적으로 자원에 접근하려 시도하면 인증을 요청한다.  
-![img.png](../img/img.png)  
+![img.png](../../img/img.png)  
   
 기본적으로 user 계정과 password를 생성한다.  
-![img.png](../img/img_1.png)  
+![img.png](../../img/img_1.png)  
   
 제공되는 password로 로그인에 성공하게 되면 자원에 접근할 수 있게 된다.  
-![img.png](../img/img_2.png)  
+![img.png](../../img/img_2.png)  
   
 해당 기본 계정은 `SecurityProperties` 클레스에서 생성해준다.  
 ```java

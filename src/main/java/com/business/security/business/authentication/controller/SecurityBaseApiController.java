@@ -1,10 +1,13 @@
 package com.business.security.business.authentication.controller;
 
+import com.business.security.business.authentication.service.SecurityContextService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,17 +19,22 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 2024-07-23
  */
 @Slf4j
+@RequiredArgsConstructor
 @RestController
 public class SecurityBaseApiController {
+private final SecurityContextService securityContextService;
+
 
     @GetMapping("/")
     public String index(String customParam) {
-        if (customParam != null) {
-            return "customPage";
-        } else {
-            return "index";
-        }
+        /*전역적으로 사용가능!!*/
+        SecurityContext context = SecurityContextHolder.getContextHolderStrategy().getContext();
+        Authentication authentication = context.getAuthentication();
+        System.out.println("authentication = " + authentication);
 
+        securityContextService.securityContext();
+
+        return "index";
     }
 
     @GetMapping("/loginPage")

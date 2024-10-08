@@ -1,6 +1,6 @@
-package com.business.security.business.authentication.controller;
+package com.business.security.business.authentication.basic.controller;
 
-import com.business.security.business.authentication.service.SecurityContextService;
+import com.business.security.business.authentication.basic.service.SecurityContextService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;

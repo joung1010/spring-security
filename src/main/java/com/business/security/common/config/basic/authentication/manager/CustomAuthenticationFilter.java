@@ -28,7 +28,7 @@ public class CustomAuthenticationFilter extends AbstractAuthenticationProcessing
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public CustomAuthenticationFilter(HttpSecurity httpSecurity) {
-        super(new AntPathRequestMatcher("/api/login", "POST"));
+        super(new AntPathRequestMatcher("/api/login", "GET"));
         setSecurityContextRepository(this.getSecurityContextRepository(httpSecurity));
     }
 

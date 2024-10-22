@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.basic.authentication.manager;
 
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +21,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import java.util.List;
 
+*/
 /**
  * <b> SecurityAuthenticationManagerConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2024-09-03
- */
+ *//*
+
 @Slf4j
 @EnableWebSecurity
 @Configuration
@@ -62,3 +65,4 @@ public class SecurityAuthenticationManagerConfig2 {
         return new InMemoryUserDetailsManager(user);
     }
 }
+*/

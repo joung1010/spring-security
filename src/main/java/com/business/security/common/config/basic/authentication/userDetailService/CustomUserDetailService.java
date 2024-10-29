@@ -1,9 +1,12 @@
 package com.business.security.common.config.basic.authentication.userDetailService;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
+import java.util.List;
 
 /**
  * <b> CustomUserDetailService </b>
@@ -17,10 +20,15 @@ public class CustomUserDetailService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return User
-                .withUsername("user")
+
+        AccountDto user = AccountDto.builder()
+                .username(username)
                 .password("{noop}1111")
-                .roles("USER")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
+                .isAccountNonExpired(true)
                 .build();
+
+        return new CustomUserDetails(user);
+
     }
 }

@@ -1,11 +1,9 @@
-/*
-package com.business.security.common.config.basic.authentication.provider;
+package com.business.security.common.config.basic.authentication.userDetailService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -14,56 +12,40 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
-
-*/
 /**
- * <b> AuthenticationProviderConfig </b>
+ * <b> AuthenticationUserDetailConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
- * @since 2024-10-22
- *//*
-
-
-
+ * @since 2024-10-29
+ */
 @Slf4j
 @EnableWebSecurity
 @Configuration
-public class AuthenticationProviderConfig3 {
+public class AuthenticationUserDetailConfig {
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
 
-
-        http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/").permitAll()
-                        .anyRequest().authenticated())
-                .authenticationProvider(customAuthenticationProvider())
-                .authenticationProvider(customAuthenticationProvider2())
+        http.authorizeHttpRequests(auth -> auth
+                        .anyRequest().authenticated()
+                )
+                .formLogin(Customizer.withDefaults())
         ;
         return http.build();
     }
 
     @Bean
-    public AuthenticationProvider customAuthenticationProvider() {
-        //parent 에 추가
-        return new CustomAuthenticationProvider();
+    public UserDetailsService userDetailsService() {
+        return new CustomUserDetailService();
     }
 
-    @Bean
-    public AuthenticationProvider customAuthenticationProvider2() {
-        //parent 에 추가
-        return new CustomAuthenticationProvider2();
-    }
 
-    @Bean
+/*    @Bean
     public UserDetailsService userDetailsService() {
         UserDetails user = User.withUsername("user").password("{noop}1111").roles("USER").build();
         return new InMemoryUserDetailsManager(user);
-    }
-
+    }*/
 }
-
-*/

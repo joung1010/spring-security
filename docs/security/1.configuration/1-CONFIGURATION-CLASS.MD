@@ -27,7 +27,6 @@
 아래는 `SecurityBuilder`와 `SecurityConfigurer`의 상속 관계 및 주요 관련 클래스들을 계층 구조로 나타낸 것입니다.
 
 ```scss
-scss코드 복사
 SecurityBuilder (인터페이스)
 │
 ├── AbstractConfiguredSecurityBuilder (추상 클래스)

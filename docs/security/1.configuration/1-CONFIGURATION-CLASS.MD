@@ -63,7 +63,6 @@ SecurityConfigurer (인터페이스)
   
 ### 스프링 Security의 자동설정
 ```scss
-scss코드 복사
 AutoConfiguration (자동 설정)
 │
 ├── SecurityAutoConfiguration

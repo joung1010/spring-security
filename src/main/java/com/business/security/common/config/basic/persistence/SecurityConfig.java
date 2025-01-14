@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.basic.persistence;
 
 import com.business.security.common.config.basic.authentication.userDetailService.CustomUserDetailService;
@@ -12,13 +13,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+*/
 /**
  * <b> SecurityConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2024-11-05
- */
+ *//*
+
 @EnableWebSecurity
 @Configuration
 public class SecurityConfig {
@@ -56,3 +59,4 @@ public class SecurityConfig {
 
 
 }
+*/

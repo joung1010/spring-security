@@ -1,3 +1,4 @@
+/*
 package com.business.security.business.authentication.mvc;
 
 import com.business.security.business.authentication.mvc.model.LoginRequest;
@@ -19,13 +20,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+*/
 /**
  * <b> LoginController </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2025-01-14
- */
+ *//*
+
 
 @Slf4j
 @RequiredArgsConstructor
@@ -55,3 +58,4 @@ public class LoginController {
         return authenticate;
     }
 }
+*/

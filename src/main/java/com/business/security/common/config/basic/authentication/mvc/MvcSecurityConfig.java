@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.basic.authentication.mvc;
 
 import lombok.extern.slf4j.Slf4j;
@@ -14,13 +15,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
+*/
 /**
  * <b> MvcSecurityConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2025-01-14
- */
+ *//*
+
 
 @Slf4j
 @Configuration
@@ -51,3 +54,4 @@ public class MvcSecurityConfig {
         return new InMemoryUserDetailsManager(user);
     }
 }
+*/

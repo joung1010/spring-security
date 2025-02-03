@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.basic.session;
 
 import lombok.extern.slf4j.Slf4j;
@@ -12,13 +13,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
+*/
 /**
  * <b> SessionSecurityConfig </b>
  *
  * @author jh.park
  * @version 0.1.0
  * @since 2025-01-20
- */
+ *//*
+
 @Slf4j
 @Configuration
 public class SessionSecurity3Config {
@@ -43,3 +46,4 @@ public class SessionSecurity3Config {
         return new InMemoryUserDetailsManager(user);
     }
 }
+*/

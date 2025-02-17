@@ -39,7 +39,7 @@ public class ExceptionFilterConfig {
                 )
                 .formLogin(Customizer.withDefaults())
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new AuthenticationEntryPoint() {
+/*                        .authenticationEntryPoint(new AuthenticationEntryPoint() {
                                                       @Override
                                                       public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
                                                           log.info("기본적으로 인증을 재시도 할 수 있는 페이지로===");
@@ -49,7 +49,7 @@ public class ExceptionFilterConfig {
                                                       }
                                                   }
 
-                        )
+                        )*/
                         .accessDeniedHandler(new AccessDeniedHandler() {
                             @Override
                             public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {

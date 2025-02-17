@@ -1,6 +1,6 @@
-package com.business.security.business.authentication.basic.controller;
+package com.business.security.business.basic.controller;
 
-import com.business.security.business.authentication.basic.service.SecurityContextService;
+import com.business.security.business.basic.service.SecurityContextService;
 import com.business.security.common.config.basic.session.SessionInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RestController
 public class SecurityBaseApiController {
-private final SecurityContextService securityContextService;
-private final SessionInfoService sessionInfoService;
+    private final SecurityContextService securityContextService;
+    private final SessionInfoService sessionInfoService;
 
 
     @GetMapping("/")
@@ -59,6 +59,7 @@ private final SessionInfoService sessionInfoService;
     public String anonymous() {
         return "anonymous";
     }
+
     @GetMapping("/authentication")
     public String authentication(Authentication authentication) {
         if (authentication instanceof AnonymousAuthenticationToken) {
@@ -67,13 +68,24 @@ private final SessionInfoService sessionInfoService;
             return "not anonymous";
         }
     }
+
     @GetMapping("/anonymousContext")
     public String anonymousContext(@CurrentSecurityContext SecurityContext securityContext) {
-      return securityContext.getAuthentication().getName();
+        return securityContext.getAuthentication().getName();
     }
 
     @GetMapping("/logoutSuccess")
     public String logoutSuccess() {
         return "logoutSuccess";
+    }
+
+    @GetMapping("/login")
+    public String login() {
+        return "loginPage";
+    }
+
+    @GetMapping("/denied")
+    public String denied() {
+        return "denied";
     }
 }

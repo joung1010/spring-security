@@ -1,4 +1,4 @@
-package com.business.security.business.authentication.basic.service;
+package com.business.security.business.basic.service;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;

@@ -1,3 +1,4 @@
+/*
 package com.business.security.common.config.basic.session;
 
 import lombok.extern.slf4j.Slf4j;
@@ -48,3 +49,4 @@ public class SessionManagementFilterConfig {
         return new InMemoryUserDetailsManager(user);
     }
 }
+*/

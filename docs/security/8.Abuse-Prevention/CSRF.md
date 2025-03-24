@@ -205,3 +205,75 @@ public class SecurityConfig {
     - Spring Security 설정에서 `.csrf()` 메서드를 통해 CSRF 보호를 활성화하거나 비활성화할 수 있으며, REST API 환경에 맞게 조정이 가능합니다.
 
 이와 같이 CSRF 보호는 스프링 시큐리티의 핵심 보안 메커니즘 중 하나로, 내부 필터(`CsrfFilter`)를 통해 토큰 기반의 검증 과정을 거쳐 애플리케이션의 보안을 강화합니다.
+  
+### 예제
+```java
+@Configuration
+public class CsrfSecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http.authorizeRequests(auth -> auth
+                        .requestMatchers("csrf").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .formLogin(Customizer.withDefaults())
+        ;
+
+        return http.build();
+    }
+}
+```
+
+```http request
+### CSRF
+POST http://localhost:8080/csrf
+Content-Type: application/json
+```
+이런식으로 요청을 하게되면 스프링에서 특정 html파일을 응답해 주는데 여기 `form`테크를 확인해보면 hidden으로 _csrf 토큰값을 전달해 주는 것을 확인할 수 있다. 
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Please sign in</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <link href="https://getbootstrap.com/docs/4.0/examples/signin/signin.css" rel="stylesheet"
+          integrity="sha384-oOE/3m0LUMPub4kaC09mrdEhIc+e3exm4xOGxAmuFXhBNF4hcg/6MiAXAf5p0P56" crossorigin="anonymous"/>
+</head>
+<body>
+<div class="container">
+    <form class="form-signin" method="post" action="/login">
+        <h2 class="form-signin-heading">Please sign in</h2>
+        <p>
+            <label for="username" class="sr-only">Username</label>
+            <input type="text" id="username" name="username" class="form-control" placeholder="Username" required
+                   autofocus>
+        </p>
+        <p>
+            <label for="password" class="sr-only">Password</label>
+            <input type="password" id="password" name="password" class="form-control" placeholder="Password" required>
+        </p>
+        <input name="_csrf" type="hidden"
+               value=BrRIJn-BMmXg25bdXXYoQ8oVyfapywy4OFz9pxFYXKx-tKcOMNYrFh3kBVLNuqTrP1scJ65x5M7L-zmVCWrKlyFhb55KjcZo/>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+</div>
+</body>
+</html>
+```
+
+해당 토큰값을 포함해서 동일한 URL로 호출하게 되면 성공하게 되는 것을 확인할 수 있다.
+```http request
+### CSRF with token
+POST http://localhost:8080/csrf
+Content-Type: application/x-www-form-urlencoded
+
+_csrf = BrRIJn-BMmXg25bdXXYoQ8oVyfapywy4OFz9pxFYXKx-tKcOMNYrFh3kBVLNuqTrP1scJ65x5M7L-zmVCWrKlyFhb55KjcZo
+```
+

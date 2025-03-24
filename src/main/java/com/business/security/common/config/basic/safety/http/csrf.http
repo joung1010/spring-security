@@ -1,0 +1,14 @@
+### CSRF
+POST http://localhost:8080/csrf
+Content-Type: application/json
+
+
+### CSRF with token
+POST http://localhost:8080/csrf
+Content-Type: application/x-www-form-urlencoded
+
+_csrf = BrRIJn-BMmXg25bdXXYoQ8oVyfapywy4OFz9pxFYXKx-tKcOMNYrFh3kBVLNuqTrP1scJ65x5M7L-zmVCWrKlyFhb55KjcZo
+
+### CSRF Ignore
+POST http://localhost:8080/csrf-ignore
+Content-Type: application/json

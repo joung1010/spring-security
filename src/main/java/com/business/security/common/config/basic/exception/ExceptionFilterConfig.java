@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,6 +27,8 @@ import java.io.IOException;
 
 @Slf4j
 @EnableWebSecurity
+@ConditionalOnProperty(value = "security.type",havingValue = "exception" , matchIfMissing = false)
+
 @Configuration
 public class ExceptionFilterConfig {
 

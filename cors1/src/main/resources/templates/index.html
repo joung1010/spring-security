@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<button onclick="corsTest()">test</button>
+<script>
+
+    const corsTest = () => {
+        fetch("http://localhost:8091/api/users/resources", {
+            method: "GET"
+/*            , headers: {
+                "Content-Type": "text/xml",
+            }*/
+        })
+            .then(res => {
+                res.json()
+                    .then(console.log)
+            });
+    };
+</script>
+</body>
+</html>

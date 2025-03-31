@@ -277,3 +277,316 @@ Content-Type: application/x-www-form-urlencoded
 _csrf = BrRIJn-BMmXg25bdXXYoQ8oVyfapywy4OFz9pxFYXKx-tKcOMNYrFh3kBVLNuqTrP1scJ65x5M7L-zmVCWrKlyFhb55KjcZo
 ```
 
+
+### CSRF 토큰 유지 - CsrfTokenRepository
+
+- .CsrfToken 은 CsrfTokenRepository를 사용하여 영속화 하며 HttpSessionCsrfTokenRepository와 CookieCsrfTokenRepository 를 지원한다.
+- 두 군데 중 원하는 위치에 토큰을 저장하도록 설정을 통해 지정할 수 있다.
+
+### 1. `HttpSessionCsrfTokenRepository`
+
+- CSRF 토큰을 **서버 세션(HttpSession)** 에 저장
+- 클라이언트에는 토큰을 전달하지 않으며, JavaScript로 직접 접근할 수 없음
+- `HttpSessionCsrfTokenRepository` 는 기본적으로 HTTP 요청 헤더인 `X-CSRF-TOKEN`  또는 요청 매개변수인 _csrf 토큰을 읽는다.
+- 기본
+
+```java
+
+http
+  .csrf(csrf -> csrf
+    .csrfTokenRepository(new HttpSessionCsrfTokenRepository())
+  );
+
+```
+
+### 2. `CookieCsrfTokenRepository`
+
+- CSRF 토큰을 **쿠키에 저장하여 클라이언트로 전달**
+- JavaScript에서 CSRF 토큰을 **읽어서 헤더에 넣는 구조**에 적합
+- 기본적으로 `CXSRF-TOKEN` 며을 가진 쿠키에 저장하고 HTTP 요청 헤더 `X-XSRF-TOEKN` 또는 매개변수인 _csrf에서 읽는다.
+- REST API, SPA(프론트-백엔드 분리) 환경에서 자주 사용
+
+```java
+
+http
+  .csrf(csrf -> csrf
+    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+  );
+
+```
+
+> withHttpOnlyFalse() 설정은 JavaScript에서 쿠키에 접근 가능하도록 허용
+>
+>
+> 즉, JS가 이 토큰을 읽어 요청 헤더에 넣을 수 있도록 함
+>
+
+---
+
+### 🛠️ 커스터마이징 가능한 점
+
+- 쿠키 이름, 경로, 도메인 등을 지정 가능 (`CookieCsrfTokenRepository`)
+- 헤더명, 파라미터명 지정 가능 (`HttpSessionCsrfTokenRepository`)
+
+예시:
+
+```java
+
+CookieCsrfTokenRepository repo = CookieCsrfTokenRepository.withHttpOnlyFalse();
+repo.setCookieName("XSRF-TOKEN");
+repo.setHeaderName("X-XSRF-TOKEN");
+
+http.csrf(csrf -> csrf
+  .csrfTokenRepository(repo)
+);
+
+```
+
+---
+
+### 최종 정리
+
+| 항목 | 설명 |
+| --- | --- |
+| **역할** | CSRF 토큰을 생성하고 클라이언트와 서버 간 상태를 유지 |
+| **저장 위치** | `HttpSession` 또는 `Cookie` 중 선택 |
+| **SPA 또는 REST API 환경** | `CookieCsrfTokenRepository` 선호 |
+| **서버 렌더링 앱** | `HttpSessionCsrfTokenRepository` 사용이 일반적 |
+
+---
+
+### CSRF 토큰 처리 - CsrfToeknRequestHandler
+
+Spring Security는 요청과 응답 과정에서 CSRF 토큰을 처리하는 방법을 정의하는 인터페이스로 `CsrfTokenRequestHandler`를 제공합니다.
+
+---
+
+### **CsrfTokenRequestHandler란?**
+
+`CsrfTokenRequestHandler`는 Spring Security가 제공하는 인터페이스로,
+
+각 요청(request)과 응답(response)의 흐름에서 **CSRF 토큰을 어떻게 처리할지 정의**합니다.
+
+주로 다음 역할을 수행합니다.
+
+- **CSRF 토큰 생성 및 조회**
+- 클라이언트에 전달되는 응답에 **토큰 추가**
+- 요청과 응답 간에 **토큰의 상태 유지**
+
+---
+
+### **주요 구현체**
+
+기본적으로 제공되는 주요 구현체는 다음과 같습니다.
+
+| 구현체 | 역할 및 특징 |
+| --- | --- |
+| `XorCsrfTokenRequestAttributeHandler` | 요청 속성(request attribute)에 CSRF 토큰을 저장하고 클라이언트에 전달. <br/> SPA와 같은 JavaScript 기반 애플리케이션에서 많이 사용 |
+| `CsrfTokenRequestAttributeHandler` | 기본 구현으로, 토큰을 요청 속성에 담아 뷰(View)로 전달 |
+
+최근 **Spring Security 6.x** 버전부터는 `XorCsrfTokenRequestAttributeHandler`가 기본으로 사용됩니다.
+
+---
+
+### **대표적인 처리 흐름**
+
+다음은 대표적인 CSRF 토큰 처리 흐름입니다.
+
+1. 요청(request)이 들어오면 **기존 CSRF 토큰 존재 여부**를 확인
+    1. _csrf 및 CsrfToken.clas.getName() 명으로 HttpServletRequest 속성에 CsrfToken 을 저장하며 HttpServletRequest으로부터 CsrfToken을 꺼내어 참조 할 수 있다.
+    2. 토큰 값은 요청 헤더(기본적으로 X-CSRF-TOKEN 또는 X-XSRF-TOKEN 중하나) 또는 요청 메개변수 (_csrf) 중 하나로부터 토큰의 유효성 비교 및 검증을 해
+    3. 클라이언트의 매 요청마다 CSRF 토큰 값(UUID)에 난수를 인코딩하여 변경한 CsrfToken이 반환 되도록 보장한다. 세션에 저장된 원본 토큰 값은 그대로 유지된다.
+    4. 헤더 값 또는 요청 매개변수로 전달된 인코딩 된 토큰은 원본 토큰을 얻기 위해 디코딩되며, 그런 다음 세션 혹은 쿠키에 저장된 영구적인 CsrfToken 과 비교된다.
+2. 토큰이 없으면 새로 **토큰 생성**
+3. 요청(request)의 속성(attribute)에 CSRF 토큰을 저장하여 컨트롤러나 뷰에 전달
+4. 응답(response)에 CSRF 토큰을 추가하여 클라이언트가 이를 전달받을 수 있게 함
+
+---
+
+### **사용 예시 (Spring Security 6.x 이상)**
+
+```java
+
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler())
+        );
+
+    return http.build();
+}
+
+```
+
+- 위의 예제는 **쿠키 기반의 토큰 저장** 및 **XOR 기반의 요청 속성 처리를 사용한 예**입니다.
+
+---
+
+### **XorCsrfTokenRequestAttributeHandler 특징**
+
+- 토큰을 **XOR 연산으로 인코딩**하여 클라이언트로 전달
+- JavaScript 기반 앱(React, Vue 등)과 함께 사용 시 편리함
+- 보안성을 높이면서도 토큰 관리가 용이함
+
+---
+
+### **어떤 경우에 사용해야 하는가?**
+
+| 상황 | 권장 사용 방식 |
+| --- | --- |
+| 서버 사이드 렌더링 (JSP, Thymeleaf) | 기본 제공되는 `CsrfTokenRequestAttributeHandler` 사용 |
+| SPA 및 REST API 기반 | `XorCsrfTokenRequestAttributeHandler` + `CookieCsrfTokenRepository` |
+
+---
+
+### **최종 정리**
+
+| 항목 | 설명 |
+| --- | --- |
+| **역할** | 요청·응답 간 CSRF 토큰 처리 및 전달 |
+| **주요 구현체** | `CsrfTokenRequestAttributeHandler`(기본), <br/> `XorCsrfTokenRequestAttributeHandler` |
+| **기본 값(Spring Security 6.x~)** | `XorCsrfTokenRequestAttributeHandler` (권장) |
+| **추천 조합(SPA)** | Cookie + XOR Handler 조합 |
+
+---
+
+## **CSRF 토큰 지연 로딩 (Deferred CSRF Token Loading)**
+
+Spring Security에서는 성능 최적화를 위해 **CSRF 토큰의 생성을 지연**하는 방식(Deferred Loading)을 제공합니다.
+
+즉, 요청이 들어올 때 무조건 CSRF 토큰을 생성하지 않고,
+
+실제로 필요할 때만 토큰을 생성하는 방법입니다.
+
+---
+
+## 📌 **지연 로딩의 배경**
+
+기본적으로 Spring Security는 모든 요청에 CSRF 토큰을 즉시 생성합니다. 그러나:
+
+- 정적 리소스 요청 (CSS, JS, 이미지) 등에서는 CSRF 토큰이 필요하지 않음
+- API나 특정 엔드포인트에 CSRF 보호가 불필요한 경우가 존재함
+
+이러한 상황에서는 **매 요청마다 토큰을 생성하는 것 자체가 불필요한 자원 소모**가 됩니다.
+
+이 문제를 해결하기 위해 Spring Security는 **CSRF 토큰 지연 로딩**을 지원합니다.
+
+---
+
+## 🎯 **지연 로딩의 동작 원리**
+
+CSRF 토큰의 지연 로딩은 다음과 같은 원리로 작동합니다.
+
+- 요청(request)이 처음 도착했을 때 **CSRF 토큰을 즉시 생성하지 않음**
+- 실제로 **토큰이 필요한 시점(뷰에서 토큰 호출 또는 API에서 CSRF 토큰 접근)**에 비로소 생성
+- 생성된 토큰은 이후 필요한 요청에 재사용
+
+이로 인해 초기 요청에서 **불필요한 부하가 감소**하고 성능이 개선됩니다.
+
+---
+
+## ⚙️ **Spring Security에서의 설정 방법**
+
+### ✅ 기본 설정 (Spring Security 6.x 이상)
+
+기본적으로 **Spring Security 6.x 버전부터는 지연 로딩이 활성화**되어 있습니다.
+
+하지만 명시적으로 설정할 때는 다음과 같이 사용합니다.
+
+```java
+
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(new CookieCsrfTokenRepository())
+            .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler()::handle)
+        );
+
+    return http.build();
+}
+
+```
+
+```java
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+XorCsrfTokenRequestAttributeHandler handler = new XorCsrfTokenRequestAttributeHandler();
+handler.setCsrfRequestAttributeName(null); //지연된 토큰을 사용하지 않고 CsrfToken을 모든 요청마다 로드한다.
+    http
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(new CookieCsrfTokenRepository())
+            .csrfTokenRequestHandler(handler)
+        );
+
+    return http.build();
+}
+```
+
+- 위 예시의 설정은 **기본적으로 Deferred 방식(지연 로딩)을 내장**하고 있습니다.
+
+### 명시적으로 지연 로딩하기 위한 방법 (더 구체적인 예제)
+
+명확히 지연 로딩을 보장하고자 할 때는 다음과 같은 설정도 가능합니다.
+
+```java
+
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+
+    http
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(new LazyCsrfTokenRepository(csrfTokenRepository)) // 지연 로딩 활성화
+            .csrfTokenRequestHandler(new XorCsrfTokenRequestAttributeHandler())
+        );
+
+    return http.build();
+}
+
+```
+
+여기서 사용하는 `LazyCsrfTokenRepository`는 실제로 지연 로딩을 명시적으로 지원하는 Spring Security에서 제공하는 구현체로, 내부적으로 필요 시점에 실제 토큰을 생성하는 역할을 합니다.
+
+---
+
+## 📝 **LazyCsrfTokenRepository 내부 구현**
+
+`LazyCsrfTokenRepository`의 주요 로직을 요약하면 다음과 같습니다.
+
+```java
+
+public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
+
+	private final CsrfTokenRepository delegate;
+
+	public LazyCsrfTokenRepository(CsrfTokenRepository delegate) {
+		this.delegate = delegate;
+	}
+
+	@Override
+	public CsrfToken generateToken(HttpServletRequest request) {
+		return delegate.generateToken(request);
+	}
+
+	@Override
+	public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
+		if (token == null && loadToken(request) == null) {
+			return; // 필요 없으면 저장하지 않음
+		}
+		delegate.saveToken(token, request, response);
+	}
+
+	@Override
+	public CsrfToken loadToken(HttpServletRequest request) {
+		return delegate.loadToken(request);
+	}
+}
+
+```
+
+- **요청 시점에 로드 요청이 발생할 때만 실제 delegate가 토큰을 생성하고 저장**합니다.
+- 불필요한 호출 및 성능 낭비를 방지합니다.

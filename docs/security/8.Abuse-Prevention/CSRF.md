@@ -796,3 +796,150 @@ public final class LazyCsrfTokenRepository implements CsrfTokenRepository {
 
 - **요청 시점에 로드 요청이 발생할 때만 실제 delegate가 토큰을 생성하고 저장**합니다.
 - 불필요한 호출 및 성능 낭비를 방지합니다.
+  
+  
+---
+
+### CSRF 통합
+
+CSRF 공격을 방지하기 위한 토큰 패턴을 사용하려면 CSRF 토큰을 HTTP 요청에 포함해야한다. 그래서 브라우저에 의해 HTTP 요청에 자동으로 포함되지 않는 요청 부분(폼, HTTP 헤더 또는 기타 부분) 중 하나중에 포함 되어야한다.
+
+클라이언트 어플리케이션이 CSRF로 보호된 백엔드 어플리케이션과 통합하는 여러가지 방법을 살표보자
+
+### HTML Forms
+
+HTML 폼을 서버에 제출하려면 CRSF 토큰을 hidden 값으로 Form에 포함해야한다.
+
+```html
+<form action="/toekn" method="post">
+	 <!-- CSRF 토큰을 자동으로 추가 -->
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+</form >
+```
+
+### JavaScript Application
+
+### SPA
+
+### 서버 측 과정
+
+1. **초기 로드 시 CSRF 토큰 제공**
+    - SPA의 경우, 서버는 초기 HTML 응답이나 별도의 API 엔드포인트를 통해 CSRF 토큰을 제공할 수 있습니다.
+    - 예를 들어, HTML 헤더에 메타 태그로 CSRF 토큰과 헤더 이름을 포함할 수 있습니다:
+
+        ```html
+        
+        <meta name="_csrf" content="${_csrf.token}" />
+        <meta name="_csrf_header" content="${_csrf.headerName}" />
+        
+        ```
+
+    - 또는 JSON 형태의 API 응답으로 CSRF 토큰을 전달할 수도 있습니다.
+2. **토큰 저장 및 관리**
+    - 클라이언트 측 자바스크립트는 페이지 로드 시 또는 API 호출로 전달받은 CSRF 토큰을 전역 변수나 상태 관리 라이브러리(Redux, Context API 등)에 저장합니다.
+    - SPA는 한 번 로드된 후 페이지 이동 없이 동적으로 데이터 요청을 수행하기 때문에, 저장된 토큰을 계속 사용합니다.
+    - 만약 세션이나 토큰 만료에 대비하여 토큰 갱신 API가 존재한다면, 주기적으로 토큰을 업데이트합니다.
+
+### 클라이언트 측 과정
+
+1. **AJAX/API 요청 시 CSRF 토큰 포함**
+    - SPA에서 모든 API 요청(POST, PUT, DELETE 등 상태 변경 요청) 시, 저장된 CSRF 토큰을 요청 헤더나 파라미터에 첨부합니다.
+    - 예를 들어, `fetch` API를 사용하는 경우:
+
+        ```jsx
+        
+        const csrfToken = /* 초기 로드 시 저장된 토큰 */;
+        const csrfHeader = /* 초기 로드 시 저장된 헤더 이름 */;
+        
+        fetch('/api/endpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                [csrfHeader]: csrfToken
+            },
+            body: JSON.stringify({ key: 'value' })
+        });
+        
+        ```
+
+2. **토큰 갱신(선택적)**
+    - 장시간 사용되는 SPA의 경우, 세션 만료나 CSRF 토큰의 유효기간이 지나면, 별도의 토큰 갱신 API를 호출하여 새로운 토큰으로 업데이트할 수 있습니다.
+3. **보안 강화**
+    - 일부 프레임워크(예: Angular)는 HTTP 인터셉터를 통해 모든 요청에 자동으로 CSRF 토큰을 첨부하도록 지원합니다.
+    - 이렇게 하면 개발자가 매번 토큰을 수동으로 추가할 필요 없이, 자동으로 헤더에 포함됩니다.
+
+### 서버 측 검증 (공통)
+
+- 서버는 API 요청에서 헤더나 파라미터로 전달된 CSRF 토큰을 읽고, 세션이나 저장소에 있는 토큰과 비교합니다.
+- 토큰이 유효하면 요청을 처리하고, 그렇지 않으면 CSRF 공격으로 간주하여 접근을 차단합니다.
+
+### 전통적인 다중 페이지 애플리케이션
+
+### 서버 측 과정
+
+1. **페이지 요청 시 CSRF 토큰 생성 및 저장**
+    - 사용자가 브라우저로 페이지를 요청하면, 서버(예: Spring Security)는 해당 요청에 대해 CSRF 토큰을 생성합니다.
+    - 이 토큰은 세션이나 지정된 저장소(예: `CsrfTokenRepository`)에 저장되고, 동시에 모델에 `_csrf`라는 이름으로 추가됩니다.
+2. **HTML 렌더링 시 CSRF 토큰 포함**
+    - 템플릿 엔진(예: Thymeleaf, JSP 등)을 사용하여 페이지를 렌더링할 때, CSRF 토큰을 `<input type="hidden">` 필드에 삽입합니다.
+    - 예를 들어, Thymeleaf에서는 다음과 같이 토큰이 자동으로 전달됩니다:
+
+        ```html
+        
+        <form th:action="@{/submit}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <!-- 나머지 폼 필드 -->
+            <button type="submit">제출</button>
+        </form>
+        
+        ```
+
+3. **요청 처리 시 토큰 검증**
+    - 사용자가 폼을 제출하면, CSRF 토큰도 함께 전송됩니다.
+    - 서버는 세션 또는 저장소에 있는 CSRF 토큰과 클라이언트로부터 전달받은 토큰을 비교합니다.
+    - 토큰이 일치하면 요청을 허용하고, 일치하지 않으면 CSRF 공격으로 간주하여 요청을 거부합니다.
+
+### 클라이언트 측 과정
+
+- **폼 제출**
+    - 사용자는 웹 페이지의 폼에 데이터를 입력하고 제출합니다.
+    - 폼 내 숨겨진 필드에 포함된 CSRF 토큰도 함께 전송되어, 서버에서 검증에 사용됩니다.
+- **AJAX 요청(선택적)**
+    - 만약 일부 요청이 AJAX로 처리된다면, 서버가 HTML 메타 태그나 자바스크립트 변수로 CSRF 토큰을 노출하고,
+
+        ```html
+        
+        <meta name="_csrf" content="${_csrf.token}" />
+        <meta name="_csrf_header" content="${_csrf.headerName}" />
+        
+        ```
+
+    - 자바스크립트 코드가 이 토큰을 읽어 모든 AJAX 요청 헤더에 추가합니다.
+
+        ```jsx
+        
+        $(document).ajaxSend(function(event, xhr) {
+            var token = $('meta[name="_csrf"]').attr('content');
+            var header = $('meta[name="_csrf_header"]').attr('content');
+            xhr.setRequestHeader(header, token);
+        });
+        
+        ```
+
+
+---
+
+## 최종 정리
+
+### 전통적 다중 페이지 애플리케이션 (Non-SPA)
+
+- **서버 측**: 페이지 렌더링 시 CSRF 토큰을 모델에 포함 → HTML 폼 내 숨겨진 필드로 전달 → 요청 제출 시 토큰 검증.
+- **클라이언트 측**: 폼 제출 시 자동으로 토큰이 전송되며, 선택적으로 AJAX 요청 시 메타 태그로 노출된 토큰을 헤더에 추가.
+
+### 단일 페이지 애플리케이션 (SPA)
+
+- **서버 측**: 초기 로드 시 HTML 메타 태그나 API 응답으로 CSRF 토큰을 제공.
+- **클라이언트 측**: 자바스크립트가 토큰을 저장한 후, 모든 AJAX/API 요청 시 토큰을 요청 헤더(또는 파라미터)에 포함 → 필요한 경우 토큰 갱신 로직 구현.
+- **공통**: 서버는 요청에 포함된 CSRF 토큰을 세션 또는 저장소에 있는 토큰과 비교하여 검증.
+
+이와 같이, 각각의 방식은 애플리케이션의 구조에 따라 CSRF 토큰을 관리하고 검증하는 절차와 구현 방식이 다르며, 서버와 클라이언트 양측에서 올바른 처리 과정을 구현해야 CSRF 공격을 효과적으로 방

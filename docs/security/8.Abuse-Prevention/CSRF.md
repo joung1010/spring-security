@@ -81,8 +81,7 @@
 아래는 `CsrfFilter`의 핵심 동작을 단순화하여 표현한 예시 코드입니다.
 
 ```java
-java
-복사
+
 public class CsrfFilter extends OncePerRequestFilter {
 
     private final CsrfTokenRepository tokenRepository;
@@ -385,6 +384,97 @@ Spring Security는 요청과 응답 과정에서 CSRF 토큰을 처리하는 방
 | `CsrfTokenRequestAttributeHandler` | 기본 구현으로, 토큰을 요청 속성에 담아 뷰(View)로 전달 |
 
 최근 **Spring Security 6.x** 버전부터는 `XorCsrfTokenRequestAttributeHandler`가 기본으로 사용됩니다.
+  
+```java 
+   DeferredCsrfToken deferredCsrfToken = this.tokenRepository.loadDeferredToken(request, response);
+        request.setAttribute(DeferredCsrfToken.class.getName(), deferredCsrfToken);
+CsrfTokenRequestHandler var10000 = this.requestHandler; // 기본 handler XorCsrfTokenRequestAttributeHandler
+        Objects.requireNonNull(deferredCsrfToken);
+        var10000.handle(request, response, deferredCsrfToken::get);
+        if (!this.requireCsrfProtectionMatcher.matches(request)) {
+        if (this.logger.isTraceEnabled()) {
+        this.logger.trace("Did not protect against CSRF since request did not match " + this.requireCsrfProtectionMatcher);
+            }
+
+                    filterChain.doFilter(request, response);
+        }
+
+```
+  
+```java
+    public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> deferredCsrfToken) {
+        Assert.notNull(request, "request cannot be null");
+        Assert.notNull(response, "response cannot be null");
+        Assert.notNull(deferredCsrfToken, "deferredCsrfToken cannot be null");
+        Supplier<CsrfToken> updatedCsrfToken = this.deferCsrfTokenUpdate(deferredCsrfToken); // 받아온 토큰을 다시하번더 Supplier로 감싸고있다.
+        super.handle(request, response, updatedCsrfToken); // 부모 클레스인 CsrfTokenRequestAttributeHandler의 handle을 호출
+    }
+    
+private Supplier<CsrfToken> deferCsrfTokenUpdate(Supplier<CsrfToken> csrfTokenSupplier) {
+    return new CachedCsrfTokenSupplier(() -> {
+        CsrfToken csrfToken = (CsrfToken)csrfTokenSupplier.get();
+        Assert.state(csrfToken != null, "csrfToken supplier returned null");
+        String updatedToken = createXoredCsrfToken(this.secureRandom, csrfToken.getToken());
+        return new DefaultCsrfToken(csrfToken.getHeaderName(), csrfToken.getParameterName(), updatedToken);
+    });
+}    
+    
+```
+  
+코드를 확인해보면 CsrfToken을 지속적으로 Supplier 객체로 감싸서 처리하는 것을 확인할 수 있는데 이는 최대한 실행시점을 지연 시켜서 성능상 이점을 얻기 위함이다.
+
+  
+`super.handle(CsrfTokenRequestAttributeHandler의)`  
+```java
+    public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> deferredCsrfToken) {
+        Assert.notNull(request, "request cannot be null");
+        Assert.notNull(response, "response cannot be null");
+        Assert.notNull(deferredCsrfToken, "deferredCsrfToken cannot be null");
+        request.setAttribute(HttpServletResponse.class.getName(), response);
+        CsrfToken csrfToken = new SupplierCsrfToken(deferredCsrfToken);
+        request.setAttribute(CsrfToken.class.getName(), csrfToken); // 토큰을 request 객체에 저장
+        String csrfAttrName = this.csrfRequestAttributeName != null ? this.csrfRequestAttributeName : csrfToken.getParameterName();
+        request.setAttribute(csrfAttrName, csrfToken);
+    }
+
+```
+  
+전달받은 `CsrfToken`을 `request` 객체에 저장하고있다. 그렇다면 request 객체에 `csrf`클레스 으림으로 토큰을 저장하는 이유는 무엇일까??  
+
+우리가 이전에 CSRF이 없는 경우 자동으로 SpringSecurity에서 hidden 속성으로 `_csrf`이름의 input 태그를 자동적으로 생성한 것을 확인할 수 있었는데 이를 생성할때 사용하기 위해서 request 객체에 저장하는 것이다.
+  
+그렇기 때문에 이 토큰 값을 스프링 MVC 에서 받아서 별도의 처리 또한 가능하다.  
+  
+이렇게 매 요청마다 실행되도 실제 Supplier 객체로 감싸기 때문에 
+```java
+        if (!this.requireCsrfProtectionMatcher.matches(request)) {
+     
+        } else {
+CsrfToken csrfToken = deferredCsrfToken.get(); // 실제 동작하는 구문
+String actualToken = this.requestHandler.resolveCsrfTokenValue(request, csrfToken);
+            if (!equalsConstantTime(csrfToken.getToken(), actualToken)) {
+boolean missingToken = deferredCsrfToken.isGenerated();
+                this.logger.debug(LogMessage.of(() -> "Invalid CSRF token found for " + UrlUtils.buildFullRequestUrl(request)));
+AccessDeniedException exception = (AccessDeniedException)(!missingToken ? new InvalidCsrfTokenException(csrfToken, actualToken) : new MissingCsrfTokenException(actualToken));
+                this.accessDeniedHandler.handle(request, response, exception);
+            } else {
+                    filterChain.doFilter(request, response);
+            }
+                    }
+                    }
+
+```  
+  
+실제 데이터를 조작하는 http 요청인 경우에만 동작하게 된다.
+그래서 실제 동작 과정에서  
+```java
+CsrfToken csrfToken = deferredCsrfToken.get(); // 실제 동작하는 구문
+String actualToken = this.requestHandler.resolveCsrfTokenValue(request, csrfToken);
+
+```
+서버에 저장되어 있는 csrfToken과 사용자가 전달한 토큰 값(actualToken)을 비교해서 처리하게 된다.  
+토큰이 일치하지 않으면 기본적으올 403 에러와 함께 마치 권한이 없는 것처럼 응답을 클라이언트에게 전달하게된다.(this.accessDeniedHandler.handle(request, response, exception))
+
 
 ---
 
@@ -484,8 +574,81 @@ CSRF 토큰의 지연 로딩은 다음과 같은 원리로 작동합니다.
 - 생성된 토큰은 이후 필요한 요청에 재사용
 
 이로 인해 초기 요청에서 **불필요한 부하가 감소**하고 성능이 개선됩니다.
+  
+```java
+protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        DeferredCsrfToken deferredCsrfToken = this.tokenRepository.loadDeferredToken(request, response);
+        request.setAttribute(DeferredCsrfToken.class.getName(), deferredCsrfToken);
+        CsrfTokenRequestHandler var10000 = this.requestHandler;
+        Objects.requireNonNull(deferredCsrfToken);
+        var10000.handle(request, response, deferredCsrfToken::get); // 실제 토큰을 사용 시점에서 생성한다.
+        if (!this.requireCsrfProtectionMatcher.matches(request)) {
+            if (this.logger.isTraceEnabled()) {
+                this.logger.trace("Did not protect against CSRF since request did not match " + this.requireCsrfProtectionMatcher);
+            }
+
+            filterChain.doFilter(request, response);
+        } else {
+            CsrfToken csrfToken = deferredCsrfToken.get(); // 실제 토큰을 사용 시점에서 생성한다.
+            String actualToken = this.requestHandler.resolveCsrfTokenValue(request, csrfToken);
+            if (!equalsConstantTime(csrfToken.getToken(), actualToken)) {
+                boolean missingToken = deferredCsrfToken.isGenerated();
+                this.logger.debug(LogMessage.of(() -> "Invalid CSRF token found for " + UrlUtils.buildFullRequestUrl(request)));
+                AccessDeniedException exception = (AccessDeniedException)(!missingToken ? new InvalidCsrfTokenException(csrfToken, actualToken) : new MissingCsrfTokenException(actualToken));
+                this.accessDeniedHandler.handle(request, response, exception);
+            } else {
+                filterChain.doFilter(request, response);
+            }
+        }
+    }
+
+
+
+```  
+  
+```java
+final class RepositoryDeferredCsrfToken implements DeferredCsrfToken {
+    private final CsrfTokenRepository csrfTokenRepository;
+    private final HttpServletRequest request;
+    private final HttpServletResponse response;
+    private CsrfToken csrfToken;
+    private boolean missingToken;
+
+    RepositoryDeferredCsrfToken(CsrfTokenRepository csrfTokenRepository, HttpServletRequest request, HttpServletResponse response) {
+        this.csrfTokenRepository = csrfTokenRepository;
+        this.request = request;
+        this.response = response;
+    }
+
+    public CsrfToken get() {
+        this.init(); // 사용 시점에 생성한다.
+        return this.csrfToken;
+    }
+
+    public boolean isGenerated() {
+        this.init();
+        return this.missingToken;
+    }
+
+    private void init() {
+        if (this.csrfToken == null) {
+            this.csrfToken = this.csrfTokenRepository.loadToken(this.request);
+            this.missingToken = this.csrfToken == null;
+            if (this.missingToken) {
+                this.csrfToken = this.csrfTokenRepository.generateToken(this.request);
+                this.csrfTokenRepository.saveToken(this.csrfToken, this.request, this.response);
+            }
+
+        }
+    }
+}
+
+
+```
+
 
 ---
+
 
 ## ⚙️ **Spring Security에서의 설정 방법**
 

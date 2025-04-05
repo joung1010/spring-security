@@ -6,4 +6,4 @@ spring:
     active: ${spring.profiles.default}
 
 security:
-  type: csrf
+  type: csrf-token

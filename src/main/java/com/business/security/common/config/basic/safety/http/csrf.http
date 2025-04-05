@@ -1,3 +1,9 @@
+
+### root
+GET http://localhost:8080
+Content-Type: application/json
+
+
 ### CSRF
 POST http://localhost:8080/csrf
 Content-Type: application/json

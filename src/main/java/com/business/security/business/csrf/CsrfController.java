@@ -44,4 +44,8 @@ public class CsrfController {
                 .token(csrfToken.getToken())
                 .build();
     }
+    @PostMapping("/cookieCsrf")
+    public CsrfToken cookieCsrf( CsrfToken csrfToken) {
+        return csrfToken;
+    }
 }

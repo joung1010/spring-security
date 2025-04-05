@@ -495,6 +495,16 @@ String actualToken = this.requestHandler.resolveCsrfTokenValue(request, csrfToke
 
 ### **사용 예시 (Spring Security 6.x 이상)**
 
+
+```java
+public final class CookieCsrfTokenRepository implements CsrfTokenRepository {
+    static final String DEFAULT_CSRF_COOKIE_NAME = "XSRF-TOKEN"; // 기본 쿠키명
+}
+```
+![img_23.png](../../img/img_23.png)  
+  
+위의 쿠키는 HttpOnly 에 체크되어 있는데 이는 http 통신시에만 사용할 수 있다. 만약에 쿠키를 javascript 에서 사용하고 싶다면 withHttpOnlyFalse 옵션을 사용하면 된다.
+
 ```java
 
 @Bean
@@ -509,6 +519,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 }
 
 ```
+![img_24.png](../../img/img_24.png)  
 
 - 위의 예제는 **쿠키 기반의 토큰 저장** 및 **XOR 기반의 요청 속성 처리를 사용한 예**입니다.
 

@@ -14,6 +14,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 
 /**
  * <b> CorsSecurityConfig </b>
@@ -33,9 +35,17 @@ public class CsrfTokenSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+//        CookieCsrfTokenRepository cookieCsrfTokenRepository = new CookieCsrfTokenRepository();
+        XorCsrfTokenRequestAttributeHandler defaultHandler = new XorCsrfTokenRequestAttributeHandler();
+        defaultHandler.setCsrfRequestAttributeName(null); //지연 로딩 사용X
+
         http.authorizeRequests(auth -> auth
-                        .requestMatchers("csrf").permitAll()
+                        .requestMatchers("csrf","/csrf-token").permitAll()
                         .anyRequest().authenticated()
+                )
+                .csrf(csrf ->
+                        csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                .csrfTokenRequestHandler(defaultHandler)
                 )
                 .formLogin(Customizer.withDefaults())
         ;

@@ -657,6 +657,38 @@ final class RepositoryDeferredCsrfToken implements DeferredCsrfToken {
 
 ```
 
+만약 지연 로딩을 사용하지 않는 경우 에는  
+```java
+        XorCsrfTokenRequestAttributeHandler defaultHandler = new XorCsrfTokenRequestAttributeHandler();
+        defaultHandler.setCsrfRequestAttributeName(null); //지연 로딩 사용X
+```
+이렇게 설정하게 되면  
+  
+```java
+public class CsrfTokenRequestAttributeHandler implements CsrfTokenRequestHandler {
+    private String csrfRequestAttributeName = "_csrf";
+
+    public CsrfTokenRequestAttributeHandler() {
+    }
+
+    public final void setCsrfRequestAttributeName(String csrfRequestAttributeName) {
+        this.csrfRequestAttributeName = csrfRequestAttributeName;
+    }
+
+    public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> deferredCsrfToken) {
+        Assert.notNull(request, "request cannot be null");
+        Assert.notNull(response, "response cannot be null");
+        Assert.notNull(deferredCsrfToken, "deferredCsrfToken cannot be null");
+        request.setAttribute(HttpServletResponse.class.getName(), response);
+        CsrfToken csrfToken = new SupplierCsrfToken(deferredCsrfToken);
+        request.setAttribute(CsrfToken.class.getName(), csrfToken);
+        String csrfAttrName = this.csrfRequestAttributeName != null ? this.csrfRequestAttributeName : csrfToken.getParameterName(); // 해당 부분에서 바로 토큰값을 반환 -> Supplier를 바로 실해시킴
+        request.setAttribute(csrfAttrName, csrfToken);
+    }
+}
+
+```
+
 
 ---
 

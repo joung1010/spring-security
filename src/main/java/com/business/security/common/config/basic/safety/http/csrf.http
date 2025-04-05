@@ -18,3 +18,8 @@ _csrf = BrRIJn-BMmXg25bdXXYoQ8oVyfapywy4OFz9pxFYXKx-tKcOMNYrFh3kBVLNuqTrP1scJ65x
 ### CSRF Ignore
 POST http://localhost:8080/csrf-ignore
 Content-Type: application/json
+
+
+### GET Csrf-Token
+GET http://localhost:8080/csrf-token
+Content-Type: application/json

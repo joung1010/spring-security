@@ -1,11 +1,10 @@
 package com.business.security.business.csrf;
 
+import com.business.security.business.csrf.model.CsrfFormDto;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * <b> CsrfController </b>
@@ -38,4 +37,11 @@ public class CsrfController {
         return token;
     }
 
+    @PostMapping("/formCsrf")
+    public CsrfFormDto.Response formCsrf(@ModelAttribute CsrfFormDto.Request request,
+                                         @RequestAttribute(name = "_csrf", required = false) CsrfToken csrfToken) {
+        return CsrfFormDto.Response.builder()
+                .token(csrfToken.getToken())
+                .build();
+    }
 }

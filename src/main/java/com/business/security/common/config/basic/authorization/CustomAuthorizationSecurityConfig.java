@@ -1,5 +1,6 @@
 package com.business.security.common.config.basic.authorization;
 
+import com.business.security.common.config.basic.authorization.matcher.CustomRequestMatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
@@ -55,7 +56,7 @@ public class CustomAuthorizationSecurityConfig {
         return http.build();
     }*/
 
-    @Bean
+/*    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, ApplicationContext context) throws Exception {
 
         DefaultHttpSecurityExpressionHandler expressionHandler = new DefaultHttpSecurityExpressionHandler();
@@ -74,8 +75,24 @@ public class CustomAuthorizationSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
-    }
+    }*/
 
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, ApplicationContext context) throws Exception {
+
+
+
+        http
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/","/login").permitAll()
+                        .requestMatchers(new CustomRequestMatcher("/admin")).hasAuthority("ROLE_ADMIN")
+                        .anyRequest().authenticated())// 위에서 정의한 규칙 외의 모든 요청은 인증을 필요로 합니다.
+                .formLogin(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable);
+
+        return http.build();
+    }
 
 
     @Bean

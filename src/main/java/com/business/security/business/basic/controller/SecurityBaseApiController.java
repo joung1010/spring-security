@@ -27,9 +27,9 @@ public class SecurityBaseApiController {
     private final SessionInfoService sessionInfoService;
 
 
-    @GetMapping("/")
+/*    @GetMapping("/")
     public Authentication index(String customParam) {
-        /*전역적으로 사용가능!!*/
+        *//*전역적으로 사용가능!!*//*
         SecurityContext context = SecurityContextHolder.getContextHolderStrategy().getContext();
         Authentication authentication = context.getAuthentication();
         System.out.println("authentication = " + authentication);
@@ -37,7 +37,7 @@ public class SecurityBaseApiController {
         securityContextService.securityContext();
 
         return authentication;
-    }
+    }*/
 
     @GetMapping("/sessionInfo")
     public String sessionInfo() {

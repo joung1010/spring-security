@@ -67,4 +67,9 @@ public class AuthorizationBasicController {
         return "post";
     }
 
+
+    @GetMapping("/custom")
+    public String custom(){
+        return "custom";
+    }
 }

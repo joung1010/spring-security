@@ -6,4 +6,4 @@ spring:
     active: ${spring.profiles.default}
 
 security:
-  type: request-matcher
+  type: method-authorization1

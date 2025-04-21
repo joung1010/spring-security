@@ -1,12 +1,11 @@
 package com.business.security.business.authorization;
 
+import com.business.security.business.authorization.model.UserAccount;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * <b> MethodAuthorizationController </b>
@@ -44,8 +43,28 @@ public class MethodAuthorizationController {
 
     @GetMapping("/user/{id}")
     @PreAuthorize("#id == authentication.name")
-    public String isAuthenticated(@PathVariable("id") String id) {
+    public String user(@PathVariable("id") String id) {
         return id;
+    }
+
+
+    @GetMapping("/owner/{id}")
+    @PostAuthorize("returnObject.owner == authentication.name")
+    public UserAccount getOwner(@PathVariable("id") String id) {
+
+        return UserAccount.builder()
+                .owner(id)
+                .isSecure(false)
+                .build();
+    }
+
+    @GetMapping("/secured")
+    @PostAuthorize("hasAuthority('ROLE_ADMIN') and returnObject.isSecure")
+    public UserAccount getOwnerSecured(String name, String secured) {
+         return UserAccount.builder()
+                .owner(name)
+                    .isSecure("Y".equals(secured))
+                .build();
     }
 
 

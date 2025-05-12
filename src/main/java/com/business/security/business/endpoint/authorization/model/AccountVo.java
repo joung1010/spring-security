@@ -1,9 +1,6 @@
 package com.business.security.business.endpoint.authorization.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 /**
  * <b> AccountVo </b>
@@ -15,6 +12,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccountVo {

@@ -2,6 +2,8 @@ package com.business.security.business.endpoint.authorization;
 
 import com.business.security.business.endpoint.authorization.model.AccountVo;
 import com.business.security.business.service.authorization.DataService;
+import com.business.security.business.service.authorization.method.annotations.IsAdmin;
+import com.business.security.business.service.authorization.method.annotations.OwnerShip;
 import jakarta.annotation.security.DenyAll;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -60,4 +62,16 @@ public class MethodAuthorization3Controller {
         return "denyAll";
     }
 
+
+    @GetMapping("/method-isAdmin")
+    @IsAdmin
+    public String isAdmin() {
+        return "isAdmin";
+    }
+
+    @GetMapping("/method-owner")
+    @OwnerShip
+    public AccountVo owner(String name) {
+        return new AccountVo(name,false);
+    }
 }

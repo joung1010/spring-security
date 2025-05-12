@@ -17,4 +17,9 @@ public class ViewController {
     public String method() {
         return "method";
     }
+
+    @GetMapping("/")
+    public String index() {
+        return "index";
+    }
 }

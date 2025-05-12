@@ -18,6 +18,7 @@ import java.util.List;
  */
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnProperty(value = "security.type", havingValue = "session", matchIfMissing = false)
 
 @Service
 public class SessionInfoService {

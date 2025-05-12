@@ -48,10 +48,6 @@ public class MethodAuthorizationSecurityConfig2 {
     }
 
 
-    @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
-    }
 
 
     @Bean

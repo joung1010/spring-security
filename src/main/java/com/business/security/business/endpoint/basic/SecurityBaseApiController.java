@@ -4,6 +4,7 @@ import com.business.security.business.service.basic.SecurityContextService;
 import com.business.security.common.config.basic.session.SessionInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnProperty(value = "security.type", havingValue = "session", matchIfMissing = false)
+
 @RestController
 public class SecurityBaseApiController {
     private final SecurityContextService securityContextService;

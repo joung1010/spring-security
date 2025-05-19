@@ -6,4 +6,4 @@ spring:
     active: ${spring.profiles.default}
 
 security:
-  type: static-authorization-1
+  type: static-authorization-2

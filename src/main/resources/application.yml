@@ -6,4 +6,4 @@ spring:
     active: ${spring.profiles.default}
 
 security:
-  type: authorization-advanced1
+  type: method-authorization4

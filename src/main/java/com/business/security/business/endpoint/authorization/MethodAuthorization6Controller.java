@@ -2,6 +2,7 @@ package com.business.security.business.endpoint.authorization;
 
 import com.business.security.business.endpoint.authorization.model.AccountVo;
 import com.business.security.business.service.authorization.method.CustomMethodAuthorizationDataService;
+import com.business.security.business.service.authorization.method.PointCutDataService;
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +21,13 @@ import org.springframework.web.bind.annotation.RestController;
  */
 
 @Slf4j
-@ConditionalOnProperty(value = "security.type", havingValue = "method-authorization5", matchIfMissing = false)
+@ConditionalOnProperty(value = "security.type", havingValue = "method-authorization6", matchIfMissing = false)
 
 @RequiredArgsConstructor
 @RestController
-public class MethodAuthorization5Controller {
+public class MethodAuthorization6Controller {
 
-    private final CustomMethodAuthorizationDataService service;
+    private final PointCutDataService service;
 
 
     @GetMapping("/method-user")

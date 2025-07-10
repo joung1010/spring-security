@@ -35,19 +35,16 @@ public class MethodAuthorization4Controller {
 
 
     @GetMapping("/method-user")
-    @Secured("ROLE_USER")
     public String user() {
         return this.service.getUser();
     }
 
     @GetMapping("/method-owner")
-    @RolesAllowed("ADMIN")
     public Account4Vo admin(String name) {
         return this.service.getOwner(name);
     }
 
     @GetMapping("/method-display")
-    @PermitAll
     public String permitAll() {
         return this.service.display();
     }

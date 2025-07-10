@@ -1,10 +1,11 @@
 package com.business.security.common.config.basic.authorization.method;
 
-import com.business.security.common.config.basic.authorization.manager.CustomPreAuthorizationManger;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.Advisor;
+import org.springframework.aop.Pointcut;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
+import org.springframework.aop.support.ComposablePointcut;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -40,5 +41,22 @@ public class CustomPointCutSecurityConfig {
         return new AuthorizationManagerBeforeMethodInterceptor(pointcut, manager);
     }
 
+
+    @Bean
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+    public Advisor pointCutAdvisor2() {
+
+        AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+        pointcut.setExpression("execution(* com.business.security.business.service.authorization.method.PointCutDataService.getUser(..))");
+        AuthorityAuthorizationManager<MethodInvocation> manager = AuthorityAuthorizationManager.hasRole("USER");
+
+        AspectJExpressionPointcut pointcut2 = new AspectJExpressionPointcut();
+        pointcut2.setExpression("execution(* com.business.security.business.service.authorization.method.PointCutDataService.getOwner(..))");
+
+        ComposablePointcut composablePointcut = new ComposablePointcut((Pointcut) pointcut);
+        composablePointcut.union((Pointcut) pointcut2);
+
+        return new AuthorizationManagerBeforeMethodInterceptor(composablePointcut, manager);
+    }
 
 }

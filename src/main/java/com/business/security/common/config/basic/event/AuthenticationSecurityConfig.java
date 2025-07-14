@@ -35,6 +35,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 @Configuration
 public class AuthenticationSecurityConfig {
+    private final ApplicationContext applicationContext;
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
@@ -49,7 +50,11 @@ public class AuthenticationSecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll())
-                .formLogin(Customizer.withDefaults())
+                  .formLogin(form -> form
+                          .successHandler((request, response, authentication) -> {
+                              applicationContext.publishEvent(new CustomAuthenticationSuccessEvent(authentication));
+                              response.sendRedirect("/");
+                          }))
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();

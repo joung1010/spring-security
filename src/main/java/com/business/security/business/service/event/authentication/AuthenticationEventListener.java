@@ -19,36 +19,36 @@ import org.springframework.stereotype.Component;
 public class AuthenticationEventListener {
     @EventListener
     public void onSuccess(AuthenticationSuccessEvent success) {
-        System.out.println("success = " + success.getAuthentication().getName());
+        System.out.println("AuthenticationSuccessEvent = " + success.getAuthentication().getName());
     }
 
     @EventListener
     public void onFailure(AbstractAuthenticationFailureEvent failures) {
-        System.out.println("failures = " + failures.getException().getMessage());
+        System.out.println("AbstractAuthenticationFailureEvent = " + failures.getException().getMessage());
     }
 
     @EventListener
     public void onSuccess(InteractiveAuthenticationSuccessEvent success) {
-        System.out.println("success = " + success.getAuthentication().getName());
+        System.out.println("InteractiveAuthenticationSuccessEvent = " + success.getAuthentication().getName());
     }
 
     @EventListener
     public void onSuccess(CustomAuthenticationSuccessEvent success) {
-        System.out.println("success = " + success.getAuthentication().getName());
+        System.out.println("CustomAuthenticationSuccessEvent = " + success.getAuthentication().getName());
     }
 
     @EventListener
     public void onFailure(AuthenticationFailureBadCredentialsEvent failures) {
-        System.out.println("failures = " + failures.getException().getMessage());
+        System.out.println("AuthenticationFailureBadCredentialsEvent = " + failures.getException().getMessage());
     }
 
     @EventListener
     public void onFailure(AuthenticationFailureProviderNotFoundEvent failures) {
-        System.out.println("failures = " + failures.getException().getMessage());
+        System.out.println("AuthenticationFailureProviderNotFoundEvent = " + failures.getException().getMessage());
     }
 
     @EventListener
     public void onFailure(CustomAuthenticationFailureEvent failures) {
-        System.out.println("failures = " + failures.getException().getMessage());
+        System.out.println("CustomAuthenticationFailureEvent = " + failures.getException().getMessage());
     }
 }

@@ -22,11 +22,15 @@ import java.util.Optional;
  * @since 2024-10-29
  */
 
-@Component
-@RequiredArgsConstructor
+//@Component
+//@RequiredArgsConstructor
 public class CustomAuthenticationProviderForUserDetail implements AuthenticationProvider {
 
     private final UserDetailsService userDetailsService;
+
+    public CustomAuthenticationProviderForUserDetail(UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {

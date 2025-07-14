@@ -21,20 +21,20 @@ import org.springframework.stereotype.Component;
  * @since 2025-07-14
  */
 
-@ConditionalOnProperty(value = "security.type", havingValue = "event-1", matchIfMissing = false)
+//@ConditionalOnProperty(value = "security.type", havingValue = "event-1", matchIfMissing = false)
 
-@Component
-@RequiredArgsConstructor
+//@Component
+//@RequiredArgsConstructor
 public class CustomAuthenticationProvider implements AuthenticationProvider {
-        private final ApplicationContext applicationEventPublisher;
+//        private final ApplicationContext applicationEventPublisher;
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
 
         if(!authentication.getName().equals("user")) {
 
-            applicationEventPublisher.publishEvent
-                    (new AuthenticationFailureProviderNotFoundEvent(authentication, new BadCredentialsException("BadCredentialException")));
+//            applicationEventPublisher.publishEvent
+//                    (new AuthenticationFailureProviderNotFoundEvent(authentication, new BadCredentialsException("BadCredentialException")));
 
             throw new BadCredentialsException("BadCredentialsException");
         }

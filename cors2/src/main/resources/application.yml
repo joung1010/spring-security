@@ -1,8 +1,0 @@
-spring:
-  application:
-    name: cors2
-  profiles:
-    default: local
-    active: ${spring.profiles.default}
-server:
-  port: 8091

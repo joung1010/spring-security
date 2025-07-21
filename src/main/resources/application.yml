@@ -1,9 +1,7 @@
 spring:
   application:
-  name: spring-security
+    name: spring-security
   profiles:
     default: local
     active: ${spring.profiles.default}
 
-security:
-  type: integration-1

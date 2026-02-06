@@ -5,3 +5,7 @@ spring:
     default: local
     active: ${spring.profiles.default}
 
+  data:
+    redis:
+      host: redis-server
+      port: 6379

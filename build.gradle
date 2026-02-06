@@ -23,7 +23,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     /*세션쿠키*/
-    implementation 'org.springframework.session:spring-session-core'
+    implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     /*aop*/
     implementation 'org.springframework.boot:spring-boot-starter-aop'
@@ -47,4 +48,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+bootJar {
+    archiveFileName = 'app.jar'
 }
